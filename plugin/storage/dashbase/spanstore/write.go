@@ -6,10 +6,10 @@ import (
 	"github.com/uber/jaeger-lib/metrics"
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/pkg/dashbase"
-	jModel "github.com/jaegertracing/jaeger/model/json"
-	storageMetrics "github.com/jaegertracing/jaeger/storage/spanstore/metrics"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/pkg/dashbase"
+	jModel "github.com/dashbase/jaeger/model/json"
+	storageMetrics "github.com/dashbase/jaeger/storage/spanstore/metrics"
 	"fmt"
 	"strconv"
 )

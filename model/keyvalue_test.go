@@ -21,7 +21,7 @@ import (
 
 	"encoding/json"
 
-	"github.com/jaegertracing/jaeger/model"
+	"github.com/dashbase/jaeger/model"
 )
 
 func TestValueTypeToFromString(t *testing.T) {

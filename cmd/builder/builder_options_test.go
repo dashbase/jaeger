@@ -20,9 +20,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	cascfg "github.com/jaegertracing/jaeger/pkg/cassandra/config"
-	escfg "github.com/jaegertracing/jaeger/pkg/es/config"
-	"github.com/jaegertracing/jaeger/storage/spanstore/memory"
+	cascfg "github.com/dashbase/jaeger/pkg/cassandra/config"
+	escfg "github.com/dashbase/jaeger/pkg/es/config"
+	"github.com/dashbase/jaeger/storage/spanstore/memory"
 	"github.com/uber/jaeger-lib/metrics"
 )
 

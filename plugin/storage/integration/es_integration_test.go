@@ -26,10 +26,10 @@ import (
 	"github.com/uber/jaeger-lib/metrics"
 	"gopkg.in/olivere/elastic.v5"
 
-	"github.com/jaegertracing/jaeger/pkg/es"
-	"github.com/jaegertracing/jaeger/pkg/testutils"
-	"github.com/jaegertracing/jaeger/plugin/storage/es/dependencystore"
-	"github.com/jaegertracing/jaeger/plugin/storage/es/spanstore"
+	"github.com/dashbase/jaeger/pkg/es"
+	"github.com/dashbase/jaeger/pkg/testutils"
+	"github.com/dashbase/jaeger/plugin/storage/es/dependencystore"
+	"github.com/dashbase/jaeger/plugin/storage/es/spanstore"
 )
 
 const (

@@ -17,7 +17,7 @@ package zipkin
 import (
 	"strings"
 
-	"github.com/jaegertracing/jaeger/thrift-gen/zipkincore"
+	"github.com/dashbase/jaeger/thrift-gen/zipkincore"
 )
 
 // IsServerCore checks to see if an annotation is a core server annotation

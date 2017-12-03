@@ -19,9 +19,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/model/adjuster"
-	"github.com/jaegertracing/jaeger/storage/spanstore"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/model/adjuster"
+	"github.com/dashbase/jaeger/storage/spanstore"
 )
 
 var errTraceNotFound = errors.New("Trace was not found")

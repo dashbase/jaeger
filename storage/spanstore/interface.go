@@ -18,7 +18,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jaegertracing/jaeger/model"
+	"github.com/dashbase/jaeger/model"
 )
 
 // Writer writes spans to storage.

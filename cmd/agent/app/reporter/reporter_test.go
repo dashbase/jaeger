@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/jaegertracing/jaeger/thrift-gen/jaeger"
-	"github.com/jaegertracing/jaeger/thrift-gen/zipkincore"
+	"github.com/dashbase/jaeger/thrift-gen/jaeger"
+	"github.com/dashbase/jaeger/thrift-gen/zipkincore"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/jaegertracing/jaeger/cmd/agent/app/testutils"
+	"github.com/dashbase/jaeger/cmd/agent/app/testutils"
 )
 
 func TestMultiReporter(t *testing.T) {

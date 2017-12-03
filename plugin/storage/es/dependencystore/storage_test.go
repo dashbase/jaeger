@@ -26,10 +26,10 @@ import (
 	"go.uber.org/zap"
 	"gopkg.in/olivere/elastic.v5"
 
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/pkg/es/mocks"
-	"github.com/jaegertracing/jaeger/pkg/testutils"
-	"github.com/jaegertracing/jaeger/storage/dependencystore"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/pkg/es/mocks"
+	"github.com/dashbase/jaeger/pkg/testutils"
+	"github.com/dashbase/jaeger/storage/dependencystore"
 )
 
 type depStorageTest struct {

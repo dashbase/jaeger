@@ -28,7 +28,7 @@ import (
 	"github.com/uber/jaeger-client-go"
 	"go.uber.org/zap"
 
-	ui "github.com/jaegertracing/jaeger/model/json"
+	ui "github.com/dashbase/jaeger/model/json"
 )
 
 const (

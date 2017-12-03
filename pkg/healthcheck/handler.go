@@ -21,7 +21,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/pkg/version"
+	"github.com/dashbase/jaeger/pkg/version"
 )
 
 // State represents the current health check state

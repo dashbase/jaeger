@@ -17,7 +17,7 @@ package testutils
 import (
 	"sync"
 
-	"github.com/jaegertracing/jaeger/thrift-gen/baggage"
+	"github.com/dashbase/jaeger/thrift-gen/baggage"
 )
 
 func newBaggageRestrictionManager() *baggageRestrictionManager {

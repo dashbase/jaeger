@@ -15,7 +15,7 @@
 package app
 
 import (
-	"github.com/jaegertracing/jaeger/model/adjuster"
+	"github.com/dashbase/jaeger/model/adjuster"
 )
 
 // StandardAdjusters is a list of model adjusters applied by the query service

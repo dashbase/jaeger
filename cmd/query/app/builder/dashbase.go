@@ -15,8 +15,8 @@
 package builder
 
 import (
-	"github.com/jaegertracing/jaeger/pkg/dashbase/config"
-	"github.com/jaegertracing/jaeger/plugin/storage/dashbase/spanstore"
+	"github.com/dashbase/jaeger/pkg/dashbase/config"
+	"github.com/dashbase/jaeger/plugin/storage/dashbase/spanstore"
 )
 
 func (sb *StorageBuilder) newDashBuilder(builder config.Builder) error {

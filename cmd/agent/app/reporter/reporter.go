@@ -15,9 +15,9 @@
 package reporter
 
 import (
-	"github.com/jaegertracing/jaeger/pkg/multierror"
-	"github.com/jaegertracing/jaeger/thrift-gen/jaeger"
-	"github.com/jaegertracing/jaeger/thrift-gen/zipkincore"
+	"github.com/dashbase/jaeger/pkg/multierror"
+	"github.com/dashbase/jaeger/thrift-gen/jaeger"
+	"github.com/dashbase/jaeger/thrift-gen/zipkincore"
 )
 
 // Reporter handles spans received by Processor and forwards them to central

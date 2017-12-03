@@ -1,4 +1,4 @@
-PROJECT_ROOT=github.com/jaegertracing/jaeger
+PROJECT_ROOT=github.com/dashbase/jaeger
 TOP_PKGS := $(shell glide novendor | grep -v -e ./thrift-gen/... -e swagger-gen... -e ./examples/... -e ./scripts/...)
 
 # all .go files that don't exist in hidden directories
@@ -23,7 +23,7 @@ MKDOCS_VIRTUAL_ENV=.mkdocs-virtual-env
 GIT_SHA=$(shell git rev-parse HEAD)
 GIT_CLOSEST_TAG=$(shell git describe --abbrev=0 --tags)
 DATE=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
-BUILD_INFO_IMPORT_PATH=github.com/jaegertracing/jaeger/pkg/version
+BUILD_INFO_IMPORT_PATH=github.com/dashbase/jaeger/pkg/version
 BUILD_INFO=-ldflags "-X $(BUILD_INFO_IMPORT_PATH).commitSHA=$(GIT_SHA) -X $(BUILD_INFO_IMPORT_PATH).latestVersion=$(GIT_CLOSEST_TAG) -X $(BUILD_INFO_IMPORT_PATH).date=$(DATE)"
 
 SED=sed
@@ -42,7 +42,7 @@ SWAGGER_GEN_DIR=swagger-gen
 PASS=$(shell printf "\033[32mPASS\033[0m")
 FAIL=$(shell printf "\033[31mFAIL\033[0m")
 COLORIZE=$(SED) ''/PASS/s//$(PASS)/'' | $(SED) ''/FAIL/s//$(FAIL)/''
-DOCKER_NAMESPACE?=jaegertracing
+DOCKER_NAMESPACE?=dashbase
 DOCKER_TAG?=latest
 
 .DEFAULT_GOAL := test-and-lint

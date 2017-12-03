@@ -13,7 +13,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 
-	"github.com/jaegertracing/jaeger/swagger-gen/models"
+	"github.com/dashbase/jaeger/swagger-gen/models"
 )
 
 // NewPostSpansParams creates a new PostSpansParams object

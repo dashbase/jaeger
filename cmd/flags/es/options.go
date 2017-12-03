@@ -21,7 +21,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/jaegertracing/jaeger/pkg/es/config"
+	"github.com/dashbase/jaeger/pkg/es/config"
 )
 
 const (

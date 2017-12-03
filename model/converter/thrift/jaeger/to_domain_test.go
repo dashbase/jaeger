@@ -24,8 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/thrift-gen/jaeger"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/thrift-gen/jaeger"
 )
 
 const NumberOfFixtures = 2

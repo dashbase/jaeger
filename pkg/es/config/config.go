@@ -20,7 +20,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/olivere/elastic.v5"
 
-	"github.com/jaegertracing/jaeger/pkg/es"
+	"github.com/dashbase/jaeger/pkg/es"
 )
 
 // Configuration describes the configuration properties needed to connect to an ElasticSearch cluster

@@ -24,12 +24,12 @@ import (
 	"github.com/uber/jaeger-lib/metrics"
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/model/converter/json"
-	jModel "github.com/jaegertracing/jaeger/model/json"
-	"github.com/jaegertracing/jaeger/pkg/cache"
-	"github.com/jaegertracing/jaeger/pkg/es"
-	storageMetrics "github.com/jaegertracing/jaeger/storage/spanstore/metrics"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/model/converter/json"
+	jModel "github.com/dashbase/jaeger/model/json"
+	"github.com/dashbase/jaeger/pkg/cache"
+	"github.com/dashbase/jaeger/pkg/es"
+	storageMetrics "github.com/dashbase/jaeger/storage/spanstore/metrics"
 )
 
 const (

@@ -22,16 +22,16 @@ import (
 	"github.com/uber/jaeger-lib/metrics"
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/cmd/builder"
-	"github.com/jaegertracing/jaeger/cmd/flags"
-	"github.com/jaegertracing/jaeger/pkg/cassandra"
-	cascfg "github.com/jaegertracing/jaeger/pkg/cassandra/config"
-	"github.com/jaegertracing/jaeger/pkg/cassandra/mocks"
-	"github.com/jaegertracing/jaeger/pkg/config"
-	"github.com/jaegertracing/jaeger/pkg/es"
-	escfg "github.com/jaegertracing/jaeger/pkg/es/config"
-	esMocks "github.com/jaegertracing/jaeger/pkg/es/mocks"
-	"github.com/jaegertracing/jaeger/storage/spanstore/memory"
+	"github.com/dashbase/jaeger/cmd/builder"
+	"github.com/dashbase/jaeger/cmd/flags"
+	"github.com/dashbase/jaeger/pkg/cassandra"
+	cascfg "github.com/dashbase/jaeger/pkg/cassandra/config"
+	"github.com/dashbase/jaeger/pkg/cassandra/mocks"
+	"github.com/dashbase/jaeger/pkg/config"
+	"github.com/dashbase/jaeger/pkg/es"
+	escfg "github.com/dashbase/jaeger/pkg/es/config"
+	esMocks "github.com/dashbase/jaeger/pkg/es/mocks"
+	"github.com/dashbase/jaeger/storage/spanstore/memory"
 )
 
 type mockSessionBuilder struct {

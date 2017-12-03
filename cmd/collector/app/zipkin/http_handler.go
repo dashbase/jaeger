@@ -30,11 +30,11 @@ import (
 	"github.com/gorilla/mux"
 	tchanThrift "github.com/uber/tchannel-go/thrift"
 
-	"github.com/jaegertracing/jaeger/cmd/collector/app"
-	"github.com/jaegertracing/jaeger/swagger-gen/models"
-	"github.com/jaegertracing/jaeger/swagger-gen/restapi"
-	"github.com/jaegertracing/jaeger/swagger-gen/restapi/operations"
-	"github.com/jaegertracing/jaeger/thrift-gen/zipkincore"
+	"github.com/dashbase/jaeger/cmd/collector/app"
+	"github.com/dashbase/jaeger/swagger-gen/models"
+	"github.com/dashbase/jaeger/swagger-gen/restapi"
+	"github.com/dashbase/jaeger/swagger-gen/restapi/operations"
+	"github.com/dashbase/jaeger/thrift-gen/zipkincore"
 )
 
 // APIHandler handles all HTTP calls to the collector

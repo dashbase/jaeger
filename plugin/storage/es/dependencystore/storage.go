@@ -23,8 +23,8 @@ import (
 	"go.uber.org/zap"
 	"gopkg.in/olivere/elastic.v5"
 
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/pkg/es"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/pkg/es"
 )
 
 const (

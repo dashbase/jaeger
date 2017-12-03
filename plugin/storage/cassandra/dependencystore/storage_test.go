@@ -25,11 +25,11 @@ import (
 	"github.com/uber/jaeger-lib/metrics"
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/pkg/cassandra"
-	"github.com/jaegertracing/jaeger/pkg/cassandra/mocks"
-	"github.com/jaegertracing/jaeger/pkg/testutils"
-	"github.com/jaegertracing/jaeger/storage/dependencystore"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/pkg/cassandra"
+	"github.com/dashbase/jaeger/pkg/cassandra/mocks"
+	"github.com/dashbase/jaeger/pkg/testutils"
+	"github.com/dashbase/jaeger/storage/dependencystore"
 )
 
 type depStorageTest struct {

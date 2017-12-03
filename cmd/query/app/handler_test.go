@@ -31,12 +31,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/model/adjuster"
-	ui "github.com/jaegertracing/jaeger/model/json"
-	depsmocks "github.com/jaegertracing/jaeger/storage/dependencystore/mocks"
-	"github.com/jaegertracing/jaeger/storage/spanstore"
-	spanstoremocks "github.com/jaegertracing/jaeger/storage/spanstore/mocks"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/model/adjuster"
+	ui "github.com/dashbase/jaeger/model/json"
+	depsmocks "github.com/dashbase/jaeger/storage/dependencystore/mocks"
+	"github.com/dashbase/jaeger/storage/spanstore"
+	spanstoremocks "github.com/dashbase/jaeger/storage/spanstore/mocks"
 	jaeger "github.com/uber/jaeger-client-go"
 )
 

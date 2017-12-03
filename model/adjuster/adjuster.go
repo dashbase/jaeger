@@ -15,8 +15,8 @@
 package adjuster
 
 import (
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/pkg/multierror"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/pkg/multierror"
 )
 
 // Adjuster applies certain modifications to a Trace object.

@@ -23,8 +23,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/jaegertracing/jaeger/swagger-gen/models"
-	"github.com/jaegertracing/jaeger/thrift-gen/zipkincore"
+	"github.com/dashbase/jaeger/swagger-gen/models"
+	"github.com/dashbase/jaeger/thrift-gen/zipkincore"
 )
 
 func TestFixtures(t *testing.T) {
