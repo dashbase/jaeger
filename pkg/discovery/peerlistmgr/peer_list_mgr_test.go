@@ -29,7 +29,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
 
-	"github.com/jaegertracing/jaeger/pkg/discovery"
+	"github.com/dashbase/jaeger/pkg/discovery"
 )
 
 type testManager struct {

@@ -15,9 +15,9 @@
 package builder
 
 import (
-	"github.com/jaegertracing/jaeger/pkg/es/config"
-	"github.com/jaegertracing/jaeger/plugin/storage/es/dependencystore"
-	"github.com/jaegertracing/jaeger/plugin/storage/es/spanstore"
+	"github.com/dashbase/jaeger/pkg/es/config"
+	"github.com/dashbase/jaeger/plugin/storage/es/dependencystore"
+	"github.com/dashbase/jaeger/plugin/storage/es/spanstore"
 )
 
 func (sb *StorageBuilder) newESBuilder(builder config.ClientBuilder) error {

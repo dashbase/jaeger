@@ -18,7 +18,7 @@ import (
 	"flag"
 	"strings"
 	"github.com/spf13/viper"
-	"github.com/jaegertracing/jaeger/pkg/dashbase/config"
+	"github.com/dashbase/jaeger/pkg/dashbase/config"
 )
 
 const (

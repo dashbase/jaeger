@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/cmd/collector/app/sanitizer/cache/mocks"
+	"github.com/dashbase/jaeger/cmd/collector/app/sanitizer/cache/mocks"
 )
 
 var (

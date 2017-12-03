@@ -20,8 +20,8 @@ import (
 	"github.com/uber/tchannel-go"
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/pkg/discovery"
-	"github.com/jaegertracing/jaeger/pkg/discovery/peerlistmgr"
+	"github.com/dashbase/jaeger/pkg/discovery"
+	"github.com/dashbase/jaeger/pkg/discovery/peerlistmgr"
 )
 
 const (

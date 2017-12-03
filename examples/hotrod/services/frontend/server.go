@@ -21,9 +21,9 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/examples/hotrod/pkg/httperr"
-	"github.com/jaegertracing/jaeger/examples/hotrod/pkg/log"
-	"github.com/jaegertracing/jaeger/examples/hotrod/pkg/tracing"
+	"github.com/dashbase/jaeger/examples/hotrod/pkg/httperr"
+	"github.com/dashbase/jaeger/examples/hotrod/pkg/log"
+	"github.com/dashbase/jaeger/examples/hotrod/pkg/tracing"
 )
 
 // Server implements jaeger-demo-frontend service

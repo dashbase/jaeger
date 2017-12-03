@@ -20,10 +20,10 @@ import (
 	"github.com/uber/jaeger-lib/metrics"
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/model"
-	cascfg "github.com/jaegertracing/jaeger/pkg/cassandra/config"
-	cSpanStore "github.com/jaegertracing/jaeger/plugin/storage/cassandra/spanstore"
-	"github.com/jaegertracing/jaeger/storage/spanstore"
+	"github.com/dashbase/jaeger/model"
+	cascfg "github.com/dashbase/jaeger/pkg/cassandra/config"
+	cSpanStore "github.com/dashbase/jaeger/plugin/storage/cassandra/spanstore"
+	"github.com/dashbase/jaeger/storage/spanstore"
 )
 
 var logger, _ = zap.NewDevelopment()

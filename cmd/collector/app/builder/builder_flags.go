@@ -20,7 +20,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/jaegertracing/jaeger/cmd/collector/app"
+	"github.com/dashbase/jaeger/cmd/collector/app"
 )
 
 const (

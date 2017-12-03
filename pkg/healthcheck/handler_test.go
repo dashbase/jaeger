@@ -20,7 +20,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/jaegertracing/jaeger/pkg/healthcheck"
+	"github.com/dashbase/jaeger/pkg/healthcheck"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"

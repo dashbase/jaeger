@@ -7,8 +7,8 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/jaegertracing/jaeger/thrift-gen/jaeger"
-	"github.com/jaegertracing/jaeger/thrift-gen/zipkincore"
+	"github.com/dashbase/jaeger/thrift-gen/jaeger"
+	"github.com/dashbase/jaeger/thrift-gen/zipkincore"
 )
 
 // (needed to ensure safety because of naive import list construction.)

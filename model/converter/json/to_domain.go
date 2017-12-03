@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/model/json"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/model/json"
 	"github.com/pkg/errors"
 )
 

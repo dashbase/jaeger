@@ -27,13 +27,13 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/model/adjuster"
-	uiconv "github.com/jaegertracing/jaeger/model/converter/json"
-	ui "github.com/jaegertracing/jaeger/model/json"
-	"github.com/jaegertracing/jaeger/pkg/multierror"
-	"github.com/jaegertracing/jaeger/storage/dependencystore"
-	"github.com/jaegertracing/jaeger/storage/spanstore"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/model/adjuster"
+	uiconv "github.com/dashbase/jaeger/model/converter/json"
+	ui "github.com/dashbase/jaeger/model/json"
+	"github.com/dashbase/jaeger/pkg/multierror"
+	"github.com/dashbase/jaeger/storage/dependencystore"
+	"github.com/dashbase/jaeger/storage/spanstore"
 )
 
 const (

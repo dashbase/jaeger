@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/jaegertracing/jaeger/model"
+	"github.com/dashbase/jaeger/model"
 )
 
 func CompareSliceOfTraces(t *testing.T, expected []*model.Trace, actual []*model.Trace) {

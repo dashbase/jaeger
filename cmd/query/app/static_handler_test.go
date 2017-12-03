@@ -136,7 +136,7 @@ func TestLoadUIConfig(t *testing.T) {
 			"menu": []interface{}{
 				map[string]interface{}{
 					"label": "GitHub",
-					"url":   "https://github.com/jaegertracing/jaeger",
+					"url":   "https://github.com/dashbase/jaeger",
 				},
 			},
 		},

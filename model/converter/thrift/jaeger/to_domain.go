@@ -17,8 +17,8 @@ package jaeger
 import (
 	"fmt"
 
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/thrift-gen/jaeger"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/thrift-gen/jaeger"
 )
 
 // ToDomain transforms a set of spans and a process in jaeger.thrift format into a slice of model.Span.

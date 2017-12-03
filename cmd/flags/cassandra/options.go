@@ -20,7 +20,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/jaegertracing/jaeger/pkg/cassandra/config"
+	"github.com/dashbase/jaeger/pkg/cassandra/config"
 )
 
 const (

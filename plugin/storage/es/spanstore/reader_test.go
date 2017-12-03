@@ -26,11 +26,11 @@ import (
 	"go.uber.org/zap"
 	"gopkg.in/olivere/elastic.v5"
 
-	"github.com/jaegertracing/jaeger/model"
-	esJson "github.com/jaegertracing/jaeger/model/json"
-	"github.com/jaegertracing/jaeger/pkg/es/mocks"
-	"github.com/jaegertracing/jaeger/pkg/testutils"
-	"github.com/jaegertracing/jaeger/storage/spanstore"
+	"github.com/dashbase/jaeger/model"
+	esJson "github.com/dashbase/jaeger/model/json"
+	"github.com/dashbase/jaeger/pkg/es/mocks"
+	"github.com/dashbase/jaeger/pkg/testutils"
+	"github.com/dashbase/jaeger/storage/spanstore"
 	"github.com/uber/jaeger-lib/metrics"
 )
 

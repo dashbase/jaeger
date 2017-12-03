@@ -24,7 +24,7 @@ import (
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 
-	"github.com/jaegertracing/jaeger/pkg/discovery"
+	"github.com/dashbase/jaeger/pkg/discovery"
 )
 
 var yamlConfig = `

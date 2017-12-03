@@ -21,10 +21,10 @@ import (
 	"github.com/uber/jaeger-lib/metrics"
 	"go.uber.org/zap"
 
-	basicB "github.com/jaegertracing/jaeger/cmd/builder"
-	"github.com/jaegertracing/jaeger/cmd/flags"
-	"github.com/jaegertracing/jaeger/storage/dependencystore"
-	"github.com/jaegertracing/jaeger/storage/spanstore"
+	basicB "github.com/dashbase/jaeger/cmd/builder"
+	"github.com/dashbase/jaeger/cmd/flags"
+	"github.com/dashbase/jaeger/storage/dependencystore"
+	"github.com/dashbase/jaeger/storage/spanstore"
 )
 
 // StorageBuilder is the interface that provides the necessary store readers

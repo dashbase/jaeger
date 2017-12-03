@@ -20,7 +20,7 @@ import (
 	"github.com/kr/pretty"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/jaegertracing/jaeger/model"
+	"github.com/dashbase/jaeger/model"
 )
 
 var (

@@ -16,7 +16,7 @@ package config
 
 import (
 	"github.com/pkg/errors"
-	"github.com/jaegertracing/jaeger/pkg/dashbase"
+	"github.com/dashbase/jaeger/pkg/dashbase"
 )
 
 // Configuration describes the configuration properties needed to connect to an ElasticSearch cluster

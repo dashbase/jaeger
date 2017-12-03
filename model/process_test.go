@@ -23,7 +23,7 @@ import (
 
 	"errors"
 
-	"github.com/jaegertracing/jaeger/model"
+	"github.com/dashbase/jaeger/model"
 	"github.com/stretchr/testify/require"
 )
 

@@ -17,7 +17,7 @@ package samplingstore
 import (
 	"time"
 
-	"github.com/jaegertracing/jaeger/cmd/collector/app/sampling/model"
+	"github.com/dashbase/jaeger/cmd/collector/app/sampling/model"
 )
 
 // Store writes and retrieves sampling data to and from storage.

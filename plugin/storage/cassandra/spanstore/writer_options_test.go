@@ -19,7 +19,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/jaegertracing/jaeger/plugin/storage/cassandra/spanstore/dbmodel"
+	"github.com/dashbase/jaeger/plugin/storage/cassandra/spanstore/dbmodel"
 )
 
 func TestWriterOpetions(t *testing.T) {

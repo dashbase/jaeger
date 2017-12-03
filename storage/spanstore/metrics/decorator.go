@@ -19,8 +19,8 @@ import (
 
 	"github.com/uber/jaeger-lib/metrics"
 
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/storage/spanstore"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/storage/spanstore"
 )
 
 // ReadMetricsDecorator wraps a spanstore.Reader and collects metrics around each read operation.

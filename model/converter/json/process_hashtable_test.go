@@ -17,7 +17,7 @@ package json
 import (
 	"testing"
 
-	"github.com/jaegertracing/jaeger/model"
+	"github.com/dashbase/jaeger/model"
 	"github.com/stretchr/testify/assert"
 )
 

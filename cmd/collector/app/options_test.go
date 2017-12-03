@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/model"
+	"github.com/dashbase/jaeger/model"
 	"github.com/uber/jaeger-lib/metrics"
 )
 

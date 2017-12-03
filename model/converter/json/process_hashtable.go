@@ -17,7 +17,7 @@ package json
 import (
 	"strconv"
 
-	"github.com/jaegertracing/jaeger/model"
+	"github.com/dashbase/jaeger/model"
 )
 
 type processHashtable struct {

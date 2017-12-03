@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/jaegertracing/jaeger/thrift-gen/zipkincore"
+	"github.com/dashbase/jaeger/thrift-gen/zipkincore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

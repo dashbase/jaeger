@@ -22,7 +22,7 @@ import (
 	"github.com/crossdock/crossdock-go"
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/crossdock/services"
+	"github.com/dashbase/jaeger/crossdock/services"
 )
 
 const (

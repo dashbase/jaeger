@@ -20,8 +20,8 @@ import (
 
 	"github.com/gocql/gocql"
 
-	"github.com/jaegertracing/jaeger/pkg/cassandra"
-	gocqlw "github.com/jaegertracing/jaeger/pkg/cassandra/gocql"
+	"github.com/dashbase/jaeger/pkg/cassandra"
+	gocqlw "github.com/dashbase/jaeger/pkg/cassandra/gocql"
 )
 
 // Configuration describes the configuration properties needed to connect to a Cassandra cluster

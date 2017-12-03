@@ -15,7 +15,7 @@
 package builder
 
 import (
-	"github.com/jaegertracing/jaeger/storage/spanstore/memory"
+	"github.com/dashbase/jaeger/storage/spanstore/memory"
 )
 
 func (sb *StorageBuilder) newMemoryStoreBuilder(memStore *memory.Store) {

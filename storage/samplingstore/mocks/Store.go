@@ -14,7 +14,7 @@
 
 package mocks
 
-import "github.com/jaegertracing/jaeger/cmd/collector/app/sampling/model"
+import "github.com/dashbase/jaeger/cmd/collector/app/sampling/model"
 import "github.com/stretchr/testify/mock"
 
 import "time"

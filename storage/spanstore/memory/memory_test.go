@@ -20,8 +20,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/storage/spanstore"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/storage/spanstore"
 )
 
 var testingSpan = &model.Span{

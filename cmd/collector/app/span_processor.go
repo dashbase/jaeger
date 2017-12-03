@@ -20,11 +20,11 @@ import (
 	"github.com/uber/tchannel-go"
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/storage/spanstore"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/storage/spanstore"
 
-	"github.com/jaegertracing/jaeger/cmd/collector/app/sanitizer"
-	"github.com/jaegertracing/jaeger/pkg/queue"
+	"github.com/dashbase/jaeger/cmd/collector/app/sanitizer"
+	"github.com/dashbase/jaeger/pkg/queue"
 )
 
 type spanProcessor struct {

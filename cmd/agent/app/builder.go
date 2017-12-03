@@ -24,15 +24,15 @@ import (
 	"github.com/uber/tchannel-go"
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/cmd/agent/app/httpserver"
-	"github.com/jaegertracing/jaeger/cmd/agent/app/processors"
-	"github.com/jaegertracing/jaeger/cmd/agent/app/reporter"
-	tchreporter "github.com/jaegertracing/jaeger/cmd/agent/app/reporter/tchannel"
-	"github.com/jaegertracing/jaeger/cmd/agent/app/servers"
-	"github.com/jaegertracing/jaeger/cmd/agent/app/servers/thriftudp"
-	jmetrics "github.com/jaegertracing/jaeger/pkg/metrics"
-	zipkinThrift "github.com/jaegertracing/jaeger/thrift-gen/agent"
-	jaegerThrift "github.com/jaegertracing/jaeger/thrift-gen/jaeger"
+	"github.com/dashbase/jaeger/cmd/agent/app/httpserver"
+	"github.com/dashbase/jaeger/cmd/agent/app/processors"
+	"github.com/dashbase/jaeger/cmd/agent/app/reporter"
+	tchreporter "github.com/dashbase/jaeger/cmd/agent/app/reporter/tchannel"
+	"github.com/dashbase/jaeger/cmd/agent/app/servers"
+	"github.com/dashbase/jaeger/cmd/agent/app/servers/thriftudp"
+	jmetrics "github.com/dashbase/jaeger/pkg/metrics"
+	zipkinThrift "github.com/dashbase/jaeger/thrift-gen/agent"
+	jaegerThrift "github.com/dashbase/jaeger/thrift-gen/jaeger"
 )
 
 const (

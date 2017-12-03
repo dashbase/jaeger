@@ -23,8 +23,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/storage/spanstore"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/storage/spanstore"
 )
 
 const (

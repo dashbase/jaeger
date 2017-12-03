@@ -25,8 +25,8 @@ import (
 	"github.com/uber/jaeger-lib/metrics"
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/pkg/cassandra/mocks"
-	"github.com/jaegertracing/jaeger/pkg/testutils"
+	"github.com/dashbase/jaeger/pkg/cassandra/mocks"
+	"github.com/dashbase/jaeger/pkg/testutils"
 )
 
 type operationNameStorageTest struct {

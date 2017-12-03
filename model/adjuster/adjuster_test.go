@@ -21,8 +21,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/jaegertracing/jaeger/model"
-	"github.com/jaegertracing/jaeger/model/adjuster"
+	"github.com/dashbase/jaeger/model"
+	"github.com/dashbase/jaeger/model/adjuster"
 )
 
 func TestSequences(t *testing.T) {
