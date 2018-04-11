@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -23,38 +24,38 @@ import (
 	"syscall"
 
 	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	jaegerClientConfig "github.com/uber/jaeger-client-go/config"
-	"github.com/uber/jaeger-lib/metrics/go-kit"
-	"github.com/uber/jaeger-lib/metrics/go-kit/expvar"
 	"go.uber.org/zap"
 
-	basicB "github.com/jaegertracing/jaeger/cmd/builder"
+	"github.com/jaegertracing/jaeger/cmd/env"
 	"github.com/jaegertracing/jaeger/cmd/flags"
-	casFlags "github.com/jaegertracing/jaeger/cmd/flags/cassandra"
-	esFlags "github.com/jaegertracing/jaeger/cmd/flags/es"
 	"github.com/jaegertracing/jaeger/cmd/query/app"
-	"github.com/jaegertracing/jaeger/cmd/query/app/builder"
 	"github.com/jaegertracing/jaeger/pkg/config"
 	"github.com/jaegertracing/jaeger/pkg/healthcheck"
+	pMetrics "github.com/jaegertracing/jaeger/pkg/metrics"
 	"github.com/jaegertracing/jaeger/pkg/recoveryhandler"
 	"github.com/jaegertracing/jaeger/pkg/version"
+	"github.com/jaegertracing/jaeger/plugin/storage"
+	istorage "github.com/jaegertracing/jaeger/storage"
 )
 
 func main() {
 	var serverChannel = make(chan os.Signal, 0)
 	signal.Notify(serverChannel, os.Interrupt, syscall.SIGTERM)
 
-	casOptions := casFlags.NewOptions("cassandra", "cassandra.archive")
-	esOptions := esFlags.NewOptions("es", "es.archive")
+	storageFactory, err := storage.NewFactory(storage.FactoryConfigFromEnvAndCLI(os.Args, os.Stderr))
+	if err != nil {
+		log.Fatalf("Cannot initialize storage factory: %v", err)
+	}
+
 	v := viper.New()
 
 	var command = &cobra.Command{
 		Use:   "jaeger-query",
-		Short: "Jaeger query is a service to access tracing data",
-		Long:  `Jaeger query is a service to access tracing data and host UI.`,
+		Short: "Jaeger query service provides a Web UI and an API for accessing trace data.",
+		Long:  `Jaeger query service provides a Web UI and an API for accessing trace data.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := flags.TryLoadConfigFile(v)
 			if err != nil {
@@ -67,16 +68,19 @@ func main() {
 				return err
 			}
 
-			casOptions.InitFromViper(v)
-			esOptions.InitFromViper(v)
-			queryOpts := new(builder.QueryOptions).InitFromViper(v)
-
-			hc, err := healthcheck.Serve(http.StatusServiceUnavailable, queryOpts.HealthCheckHTTPPort, logger)
+			queryOpts := new(app.QueryOptions).InitFromViper(v)
+			hc, err := healthcheck.
+				New(healthcheck.Unavailable, healthcheck.Logger(logger)).
+				Serve(queryOpts.HealthCheckHTTPPort)
 			if err != nil {
 				logger.Fatal("Could not start the health check server.", zap.Error(err))
 			}
 
-			metricsFactory := xkit.Wrap("jaeger-query", expvar.NewFactory(10))
+			mBldr := new(pMetrics.Builder).InitFromViper(v)
+			metricsFactory, err := mBldr.CreateMetricsFactory("jaeger-query")
+			if err != nil {
+				logger.Fatal("Cannot create metrics factory.", zap.Error(err))
+			}
 
 			tracer, closer, err := jaegerClientConfig.Configuration{
 				Sampler: &jaegerClientConfig.SamplerConfig{
@@ -90,27 +94,40 @@ func main() {
 			}
 			defer closer.Close()
 
-			storageBuild, err := builder.NewStorageBuilder(
-				sFlags.SpanStorage.Type,
-				sFlags.DependencyStorage.DataFrequency,
-				basicB.Options.LoggerOption(logger),
-				basicB.Options.MetricsFactoryOption(metricsFactory),
-				basicB.Options.CassandraSessionOption(casOptions.GetPrimary()),
-				basicB.Options.ElasticClientOption(esOptions.GetPrimary()),
-			)
+			storageFactory.InitFromViper(v)
+			if err := storageFactory.Initialize(metricsFactory, logger); err != nil {
+				logger.Fatal("Failed to init storage factory", zap.Error(err))
+			}
+			spanReader, err := storageFactory.CreateSpanReader()
 			if err != nil {
-				logger.Fatal("Failed to init storage builder", zap.Error(err))
+				logger.Fatal("Failed to create span reader", zap.Error(err))
+			}
+			dependencyReader, err := storageFactory.CreateDependencyReader()
+			if err != nil {
+				logger.Fatal("Failed to create dependency reader", zap.Error(err))
 			}
 
-			apiHandler := app.NewAPIHandler(
-				storageBuild.SpanReader,
-				storageBuild.DependencyReader,
-				app.HandlerOptions.Prefix(queryOpts.Prefix),
+			apiHandlerOptions := []app.HandlerOption{
 				app.HandlerOptions.Logger(logger),
-				app.HandlerOptions.Tracer(tracer))
-			r := mux.NewRouter()
+				app.HandlerOptions.Tracer(tracer),
+			}
+			apiHandlerOptions = append(apiHandlerOptions, archiveOptions(storageFactory, logger)...)
+			apiHandler := app.NewAPIHandler(
+				spanReader,
+				dependencyReader,
+				apiHandlerOptions...)
+			r := app.NewRouter()
+			if queryOpts.BasePath != "/" {
+				r = r.PathPrefix(queryOpts.BasePath).Subrouter()
+			}
 			apiHandler.RegisterRoutes(r)
-			registerStaticHandler(r, logger, queryOpts)
+			app.RegisterStaticHandler(r, logger, queryOpts)
+
+			if h := mBldr.Handler(); h != nil {
+				logger.Info("Registering metrics handler with HTTP server", zap.String("route", mBldr.HTTPRoute))
+				r.Handle(mBldr.HTTPRoute, h)
+			}
+
 			portStr := ":" + strconv.Itoa(queryOpts.Port)
 			compressHandler := handlers.CompressHandler(r)
 			recoveryHandler := recoveryhandler.NewRecoveryHandler(logger, true)
@@ -120,7 +137,7 @@ func main() {
 				if err := http.ListenAndServe(portStr, recoveryHandler(compressHandler)); err != nil {
 					logger.Fatal("Could not launch service", zap.Error(err))
 				}
-				hc.Set(http.StatusInternalServerError)
+				hc.Set(healthcheck.Unavailable)
 			}()
 
 			hc.Ready()
@@ -134,15 +151,16 @@ func main() {
 	}
 
 	command.AddCommand(version.Command())
+	command.AddCommand(env.Command())
 
 	config.AddFlags(
 		v,
 		command,
 		flags.AddConfigFileFlag,
 		flags.AddFlags,
-		casOptions.AddFlags,
-		esOptions.AddFlags,
-		builder.AddFlags,
+		storageFactory.AddFlags,
+		pMetrics.AddFlags,
+		app.AddFlags,
 	)
 
 	if error := command.Execute(); error != nil {
@@ -151,14 +169,32 @@ func main() {
 	}
 }
 
-func registerStaticHandler(r *mux.Router, logger *zap.Logger, qOpts *builder.QueryOptions) {
-	staticHandler, err := app.NewStaticAssetsHandler(qOpts.StaticAssets, qOpts.UIConfig)
-	if err != nil {
-		logger.Fatal("Could not create static assets handler", zap.Error(err))
+func archiveOptions(storageFactory istorage.Factory, logger *zap.Logger) []app.HandlerOption {
+	archiveFactory, ok := storageFactory.(istorage.ArchiveFactory)
+	if !ok {
+		logger.Info("Archive storage not supported by the factory")
+		return nil
 	}
-	if staticHandler != nil {
-		staticHandler.RegisterRoutes(r)
-	} else {
-		logger.Info("Static handler is not registered")
+	reader, err := archiveFactory.CreateArchiveSpanReader()
+	if err == istorage.ErrArchiveStorageNotConfigured || err == istorage.ErrArchiveStorageNotSupported {
+		logger.Info("Archive storage not created", zap.String("reason", err.Error()))
+		return nil
+	}
+	if err != nil {
+		logger.Error("Cannot init archive storage reader", zap.Error(err))
+		return nil
+	}
+	writer, err := archiveFactory.CreateArchiveSpanWriter()
+	if err == istorage.ErrArchiveStorageNotConfigured || err == istorage.ErrArchiveStorageNotSupported {
+		logger.Info("Archive storage not created", zap.String("reason", err.Error()))
+		return nil
+	}
+	if err != nil {
+		logger.Error("Cannot init archive storage writer", zap.Error(err))
+		return nil
+	}
+	return []app.HandlerOption{
+		app.HandlerOptions.ArchiveSpanReader(reader),
+		app.HandlerOptions.ArchiveSpanWriter(writer),
 	}
 }

@@ -17,7 +17,6 @@ package spanstore
 import (
 	"encoding/json"
 	"strings"
-	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -66,6 +65,12 @@ const (
 	durationBucketSize = time.Hour
 )
 
+const (
+	storeFlag = storageMode(1 << iota)
+	indexFlag
+)
+
+type storageMode uint8
 type serviceNamesWriter func(serviceName string) error
 type operationNamesWriter func(serviceName, operationName string) error
 
@@ -85,8 +90,8 @@ type SpanWriter struct {
 	writerMetrics        spanWriterMetrics
 	logger               *zap.Logger
 	tagIndexSkipped      metrics.Counter
-	bucketCounter        uint32
 	tagFilter            dbmodel.TagFilter
+	storageMode          storageMode
 }
 
 // NewSpanWriter returns a SpanWriter
@@ -115,12 +120,33 @@ func NewSpanWriter(
 		logger:          logger,
 		tagIndexSkipped: tagIndexSkipped,
 		tagFilter:       opts.tagFilter,
+		storageMode:     opts.storageMode,
 	}
+}
+
+// Close closes SpanWriter
+func (s *SpanWriter) Close() error {
+	s.session.Close()
+	return nil
 }
 
 // WriteSpan saves the span into Cassandra
 func (s *SpanWriter) WriteSpan(span *model.Span) error {
 	ds := dbmodel.FromDomain(span)
+	if s.storageMode&storeFlag == storeFlag {
+		if err := s.writeSpan(span, ds); err != nil {
+			return err
+		}
+	}
+	if s.storageMode&indexFlag == indexFlag {
+		if err := s.writeIndexes(span, ds); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *SpanWriter) writeSpan(span *model.Span, ds *dbmodel.Span) error {
 	mainQuery := s.session.Query(
 		insertSpan,
 		ds.TraceID,
@@ -136,10 +162,13 @@ func (s *SpanWriter) WriteSpan(span *model.Span) error {
 		ds.Refs,
 		ds.Process,
 	)
-
 	if err := s.writerMetrics.traces.Exec(mainQuery, s.logger); err != nil {
 		return s.logError(ds, err, "Failed to insert span", s.logger)
 	}
+	return nil
+}
+
+func (s *SpanWriter) writeIndexes(span *model.Span, ds *dbmodel.Span) error {
 	if err := s.saveServiceNameAndOperationName(ds.ServiceName, ds.OperationName); err != nil {
 		// should this be a soft failure?
 		return s.logError(ds, err, "Failed to insert service name and operation name", s.logger)
@@ -149,7 +178,7 @@ func (s *SpanWriter) WriteSpan(span *model.Span) error {
 		return s.logError(ds, err, "Failed to index tags", s.logger)
 	}
 
-	if err := s.indexBySerice(span.TraceID, ds); err != nil {
+	if err := s.indexByService(span.TraceID, ds); err != nil {
 		return s.logError(ds, err, "Failed to index service name", s.logger)
 	}
 
@@ -199,8 +228,8 @@ func (s *SpanWriter) indexByDuration(span *dbmodel.Span, startTime time.Time) er
 	return err
 }
 
-func (s *SpanWriter) indexBySerice(traceID model.TraceID, span *dbmodel.Span) error {
-	bucketNo := atomic.AddUint32(&s.bucketCounter, 1) % defaultNumBuckets
+func (s *SpanWriter) indexByService(traceID model.TraceID, span *dbmodel.Span) error {
+	bucketNo := uint64(span.SpanHash) % defaultNumBuckets
 	query := s.session.Query(serviceNameIndex)
 	q := query.Bind(span.Process.ServiceName, bucketNo, span.StartTime, span.TraceID)
 	return s.writerMetrics.serviceNameIndex.Exec(q, s.logger)

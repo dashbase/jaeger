@@ -16,6 +16,8 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -26,8 +28,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/uber/jaeger-lib/metrics/go-kit"
-	"github.com/uber/jaeger-lib/metrics/go-kit/expvar"
+	"github.com/uber/jaeger-lib/metrics"
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/thrift"
 	"go.uber.org/zap"
@@ -35,32 +36,41 @@ import (
 	basicB "github.com/jaegertracing/jaeger/cmd/builder"
 	"github.com/jaegertracing/jaeger/cmd/collector/app"
 	"github.com/jaegertracing/jaeger/cmd/collector/app/builder"
+	"github.com/jaegertracing/jaeger/cmd/collector/app/sampling"
 	"github.com/jaegertracing/jaeger/cmd/collector/app/zipkin"
+	"github.com/jaegertracing/jaeger/cmd/env"
 	"github.com/jaegertracing/jaeger/cmd/flags"
-	casFlags "github.com/jaegertracing/jaeger/cmd/flags/cassandra"
-	esFlags "github.com/jaegertracing/jaeger/cmd/flags/es"
 	"github.com/jaegertracing/jaeger/pkg/config"
 	"github.com/jaegertracing/jaeger/pkg/healthcheck"
+	pMetrics "github.com/jaegertracing/jaeger/pkg/metrics"
 	"github.com/jaegertracing/jaeger/pkg/recoveryhandler"
 	"github.com/jaegertracing/jaeger/pkg/version"
+	ss "github.com/jaegertracing/jaeger/plugin/sampling/strategystore"
+	"github.com/jaegertracing/jaeger/plugin/storage"
 	jc "github.com/jaegertracing/jaeger/thrift-gen/jaeger"
+	sc "github.com/jaegertracing/jaeger/thrift-gen/sampling"
 	zc "github.com/jaegertracing/jaeger/thrift-gen/zipkincore"
 )
+
+const serviceName = "jaeger-collector"
 
 func main() {
 	var signalsChannel = make(chan os.Signal, 0)
 	signal.Notify(signalsChannel, os.Interrupt, syscall.SIGTERM)
 
-	serviceName := "jaeger-collector"
-	casOptions := casFlags.NewOptions("cassandra")
-	esOptions := esFlags.NewOptions("es")
-
+	storageFactory, err := storage.NewFactory(storage.FactoryConfigFromEnvAndCLI(os.Args, os.Stderr))
+	if err != nil {
+		log.Fatalf("Cannot initialize storage factory: %v", err)
+	}
+	strategyStoreFactory, err := ss.NewFactory(ss.FactoryConfigFromEnv())
+	if err != nil {
+		log.Fatalf("Cannot initialize sampling strategy store factory: %v", err)
+	}
 	v := viper.New()
 	command := &cobra.Command{
 		Use:   "jaeger-collector",
 		Short: "Jaeger collector receives and processes traces from Jaeger agents and clients",
-		Long: `Jaeger collector receives traces from Jaeger agents and agent and runs them through
-				a processing pipeline.`,
+		Long:  `Jaeger collector receives traces from Jaeger agents and runs them through a processing pipeline.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := flags.TryLoadConfigFile(v)
 			if err != nil {
@@ -73,25 +83,34 @@ func main() {
 				return err
 			}
 
-			casOptions.InitFromViper(v)
-			esOptions.InitFromViper(v)
-
-			baseMetrics := xkit.Wrap(serviceName, expvar.NewFactory(10))
-
 			builderOpts := new(builder.CollectorOptions).InitFromViper(v)
-
-			hc, err := healthcheck.Serve(http.StatusServiceUnavailable, builderOpts.CollectorHealthCheckHTTPPort, logger)
+			hc, err := healthcheck.
+				New(healthcheck.Unavailable, healthcheck.Logger(logger)).
+				Serve(builderOpts.CollectorHealthCheckHTTPPort)
 			if err != nil {
 				logger.Fatal("Could not start the health check server.", zap.Error(err))
 			}
 
+			mBldr := new(pMetrics.Builder).InitFromViper(v)
+			metricsFactory, err := mBldr.CreateMetricsFactory("jaeger-collector")
+			if err != nil {
+				logger.Fatal("Cannot create metrics factory.", zap.Error(err))
+			}
+
+			storageFactory.InitFromViper(v)
+			if err := storageFactory.Initialize(metricsFactory, logger); err != nil {
+				logger.Fatal("Failed to init storage factory", zap.Error(err))
+			}
+			spanWriter, err := storageFactory.CreateSpanWriter()
+			if err != nil {
+				logger.Fatal("Failed to create span writer", zap.Error(err))
+			}
+
 			handlerBuilder, err := builder.NewSpanHandlerBuilder(
 				builderOpts,
-				sFlags,
-				basicB.Options.CassandraSessionOption(casOptions.GetPrimary()),
-				basicB.Options.ElasticClientOption(esOptions.GetPrimary()),
+				spanWriter,
 				basicB.Options.LoggerOption(logger),
-				basicB.Options.MetricsFactoryOption(baseMetrics),
+				basicB.Options.MetricsFactoryOption(metricsFactory),
 			)
 			if err != nil {
 				logger.Fatal("Unable to set up builder", zap.Error(err))
@@ -106,6 +125,9 @@ func main() {
 			server.Register(jc.NewTChanCollectorServer(jaegerBatchesHandler))
 			server.Register(zc.NewTChanZipkinCollectorServer(zipkinSpansHandler))
 
+			samplingHandler := initializeSamplingHandler(strategyStoreFactory, v, metricsFactory, logger)
+			server.Register(sc.NewTChanSamplingManagerServer(samplingHandler))
+
 			portStr := ":" + strconv.Itoa(builderOpts.CollectorPort)
 			listener, err := net.Listen("tcp", portStr)
 			if err != nil {
@@ -116,6 +138,10 @@ func main() {
 			r := mux.NewRouter()
 			apiHandler := app.NewAPIHandler(jaegerBatchesHandler)
 			apiHandler.RegisterRoutes(r)
+			if h := mBldr.Handler(); h != nil {
+				logger.Info("Registering metrics handler with HTTP server", zap.String("route", mBldr.HTTPRoute))
+				r.Handle(mBldr.HTTPRoute, h)
+			}
 			httpPortStr := ":" + strconv.Itoa(builderOpts.CollectorHTTPPort)
 			recoveryHandler := recoveryhandler.NewRecoveryHandler(logger, true)
 
@@ -127,12 +153,19 @@ func main() {
 				if err := http.ListenAndServe(httpPortStr, recoveryHandler(r)); err != nil {
 					logger.Fatal("Could not launch service", zap.Error(err))
 				}
-				hc.Set(http.StatusInternalServerError)
+				hc.Set(healthcheck.Unavailable)
 			}()
 
 			hc.Ready()
 			select {
 			case <-signalsChannel:
+				if closer, ok := spanWriter.(io.Closer); ok {
+					err := closer.Close()
+					if err != nil {
+						logger.Error("Failed to close span writer", zap.Error(err))
+					}
+				}
+
 				logger.Info("Jaeger Collector is finishing")
 			}
 			return nil
@@ -140,6 +173,7 @@ func main() {
 	}
 
 	command.AddCommand(version.Command())
+	command.AddCommand(env.Command())
 
 	config.AddFlags(
 		v,
@@ -147,12 +181,13 @@ func main() {
 		flags.AddConfigFileFlag,
 		flags.AddFlags,
 		builder.AddFlags,
-		casOptions.AddFlags,
-		esOptions.AddFlags,
+		storageFactory.AddFlags,
+		pMetrics.AddFlags,
+		strategyStoreFactory.AddFlags,
 	)
 
-	if error := command.Execute(); error != nil {
-		fmt.Println(error.Error())
+	if err := command.Execute(); err != nil {
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 }
@@ -175,4 +210,21 @@ func startZipkinHTTPAPI(
 			logger.Fatal("Could not launch service", zap.Error(err))
 		}
 	}
+}
+
+func initializeSamplingHandler(
+	samplingStrategyStoreFactory *ss.Factory,
+	v *viper.Viper,
+	metricsFactory metrics.Factory,
+	logger *zap.Logger,
+) sampling.Handler {
+	samplingStrategyStoreFactory.InitFromViper(v)
+	if err := samplingStrategyStoreFactory.Initialize(metricsFactory, logger); err != nil {
+		logger.Fatal("Failed to init sampling strategy store factory", zap.Error(err))
+	}
+	strategyStore, err := samplingStrategyStoreFactory.CreateStrategyStore()
+	if err != nil {
+		logger.Fatal("Failed to create sampling strategy store", zap.Error(err))
+	}
+	return sampling.NewHandler(strategyStore)
 }

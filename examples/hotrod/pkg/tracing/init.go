@@ -28,7 +28,7 @@ import (
 )
 
 // Init creates a new instance of Jaeger tracer.
-func Init(serviceName string, metricsFactory metrics.Factory, logger log.Factory) opentracing.Tracer {
+func Init(serviceName string, metricsFactory metrics.Factory, logger log.Factory, hostPort string) opentracing.Tracer {
 	cfg := config.Configuration{
 		Sampler: &config.SamplerConfig{
 			Type:  "const",
@@ -37,8 +37,11 @@ func Init(serviceName string, metricsFactory metrics.Factory, logger log.Factory
 		Reporter: &config.ReporterConfig{
 			LogSpans:            false,
 			BufferFlushInterval: 1 * time.Second,
+			LocalAgentHostPort:  hostPort,
 		},
 	}
+	// TODO(ys) a quick hack to ensure random generators get different seeds, which are based on current time.
+	time.Sleep(100 * time.Millisecond)
 	tracer, _, err := cfg.New(
 		serviceName,
 		config.Logger(jaegerLoggerAdapter{logger.Bg()}),

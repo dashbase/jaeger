@@ -49,6 +49,10 @@ func spanV2ToThrift(s *models.Span) (*zipkincore.Span, error) {
 		Timestamp: &s.Timestamp,
 		Duration:  &s.Duration,
 	}
+	if traceID.High != 0 {
+		help := int64(traceID.High)
+		tSpan.TraceIDHigh = &help
+	}
 
 	if len(s.ParentID) > 0 {
 		parentID, err := model.SpanIDFromString(cutLongID(s.ParentID))
@@ -81,6 +85,16 @@ func spanV2ToThrift(s *models.Span) (*zipkincore.Span, error) {
 			return nil, err
 		}
 		tSpan.BinaryAnnotations = append(tSpan.BinaryAnnotations, rAddrAnno)
+	}
+
+	// add local component to represent service name
+	// to_domain looks for a service name in all [bin]annotations
+	if localE != nil && len(tSpan.BinaryAnnotations) == 0 && len(tSpan.Annotations) == 0 {
+		tSpan.BinaryAnnotations = append(tSpan.BinaryAnnotations, &zipkincore.BinaryAnnotation{
+			Key:            zipkincore.LOCAL_COMPONENT,
+			Host:           localE,
+			AnnotationType: zipkincore.AnnotationType_STRING,
+		})
 	}
 	return tSpan, nil
 }

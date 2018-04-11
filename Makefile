@@ -2,7 +2,7 @@ PROJECT_ROOT=github.com/jaegertracing/jaeger
 TOP_PKGS := $(shell glide novendor | grep -v -e ./thrift-gen/... -e swagger-gen... -e ./examples/... -e ./scripts/...)
 
 # all .go files that don't exist in hidden directories
-ALL_SRC := $(shell find . -name "*.go" | grep -v -e vendor -e thrift-gen -e swagger-gen \
+ALL_SRC := $(shell find . -name "*.go" | grep -v -e vendor -e thrift-gen -e swagger-gen -e examples -e doc.go \
         -e ".*/\..*" \
         -e ".*/_.*" \
         -e ".*/mocks.*")
@@ -18,7 +18,7 @@ GOVET=go vet
 GOFMT=gofmt
 FMT_LOG=fmt.log
 LINT_LOG=lint.log
-MKDOCS_VIRTUAL_ENV=.mkdocs-virtual-env
+IMPORT_LOG=import.log
 
 GIT_SHA=$(shell git rev-parse HEAD)
 GIT_CLOSEST_TAG=$(shell git describe --abbrev=0 --tags)
@@ -41,9 +41,12 @@ SWAGGER_GEN_DIR=swagger-gen
 
 PASS=$(shell printf "\033[32mPASS\033[0m")
 FAIL=$(shell printf "\033[31mFAIL\033[0m")
+FIXME=$(shell printf "\033[31mFIXME\033[0m")
 COLORIZE=$(SED) ''/PASS/s//$(PASS)/'' | $(SED) ''/FAIL/s//$(FAIL)/''
 DOCKER_NAMESPACE?=jaegertracing
 DOCKER_TAG?=latest
+
+MOCKERY=mockery
 
 .DEFAULT_GOAL := test-and-lint
 
@@ -76,8 +79,27 @@ integration-test: go-gen
 storage-integration-test: go-gen
 	$(GOTEST) ./plugin/storage/integration/...
 
+all-pkgs:
+	@echo $(ALL_PKGS) | tr ' ' '\n' | sort
+
+cvr-pkgs:
+	go list $(TOP_PKGS)
+
+.PHONY: cover
+cover: nocover
+	@echo pre-compiling tests
+	@time go test -i $(ALL_PKGS)
+	@./scripts/cover.sh $(shell go list $(TOP_PKGS))
+	go tool cover -html=cover.out -o cover.html
+
+.PHONY: nocover
+nocover:
+	@echo Verifying that all packages have test files to count in coverage
+	@scripts/check-test-files.sh $(subst github.com/jaegertracing/jaeger/,./,$(ALL_PKGS)) | $(SED) ''/FIXME/s//$(FIXME)/''
+
 .PHONY: fmt
 fmt:
+	./scripts/import-order-cleanup.sh inplace
 	$(GOFMT) -e -s -l -w $(ALL_SRC)
 	./scripts/updateLicenses.sh
 
@@ -89,21 +111,31 @@ lint:
 	@[ ! -s "$(LINT_LOG)" ] || (echo "Lint Failures" | cat - $(LINT_LOG) && false)
 	@$(GOFMT) -e -s -l $(ALL_SRC) > $(FMT_LOG)
 	@./scripts/updateLicenses.sh >> $(FMT_LOG)
-	@[ ! -s "$(FMT_LOG)" ] || (echo "Go fmt or license check failures, run 'make fmt'" | cat - $(FMT_LOG) && false)
+	@./scripts/import-order-cleanup.sh stdout > $(IMPORT_LOG)
+	@[ ! -s "$(FMT_LOG)" -a ! -s "$(IMPORT_LOG)" ] || (echo "Go fmt, license check, or import ordering failures, run 'make fmt'" | cat - $(FMT_LOG) && false)
 
 .PHONY: install-glide
 install-glide:
-	# all we want is: glide --version || go get github.com/Masterminds/glide
-	# but have to pin to 0.12.3 due to https://github.com/Masterminds/glide/issues/745
-	@which glide > /dev/null || (mkdir -p $(GOPATH)/src/github.com/Masterminds && cd $(GOPATH)/src/github.com/Masterminds && git clone https://github.com/Masterminds/glide.git && cd glide && git checkout v0.12.3 && go install)
+	@which glide > /dev/null || go get github.com/Masterminds/glide
 
 .PHONY: install
 install: install-glide
 	glide install
 
+.PHONY: install-go-bindata
+install-go-bindata:
+	go get github.com/jteeuwen/go-bindata/...
+	go get github.com/elazarl/go-bindata-assetfs/...
+
 .PHONY: build-examples
-build-examples:
-	go build -o ./examples/hotrod/hotrod-demo ./examples/hotrod/main.go
+build-examples: install-go-bindata
+	(cd ./examples/hotrod/services/frontend/ && go-bindata-assetfs -pkg frontend web_assets/...)
+	rm ./examples/hotrod/services/frontend/bindata.go
+	CGO_ENABLED=0 GOOS=linux installsuffix=cgo go build -o ./examples/hotrod/hotrod-linux ./examples/hotrod/main.go
+
+.PHONE: docker-hotrod
+docker-hotrod: build-examples
+	docker build -t $(DOCKER_NAMESPACE)/example-hotrod:${DOCKER_TAG} ./examples/hotrod
 
 .PHONY: build_ui
 build_ui:
@@ -140,6 +172,8 @@ docker-images-only:
 	cp -r jaeger-ui-build/build/ cmd/query/jaeger-ui-build
 	docker build -t $(DOCKER_NAMESPACE)/jaeger-cassandra-schema:${DOCKER_TAG} plugin/storage/cassandra/
 	@echo "Finished building jaeger-cassandra-schema =============="
+	docker build -t $(DOCKER_NAMESPACE)/jaeger-es-index-cleaner:${DOCKER_TAG} plugin/storage/es
+	@echo "Finished building jaeger-es-indices-clean =============="
 	for component in agent collector query ; do \
 		docker build -t $(DOCKER_NAMESPACE)/jaeger-$$component:${DOCKER_TAG} cmd/$$component ; \
 		echo "Finished building $$component ==============" ; \
@@ -156,7 +190,7 @@ docker-push:
 	if [ $$CONFIRM != "y" ] && [ $$CONFIRM != "Y" ]; then \
 		echo "Exiting." ; exit 1 ; \
 	fi
-	for component in agent cassandra-schema collector query ; do \
+	for component in agent cassandra-schema es-index-cleaner collector query example-hotrod; do \
 		docker push $(DOCKER_NAMESPACE)/jaeger-$$component ; \
 	done
 
@@ -174,11 +208,6 @@ build-crossdock: docker-no-ui
 build-crossdock-fresh: build-crossdock-linux
 	make crossdock-fresh
 
-.PHONY: cover
-cover:
-	./scripts/cover.sh $(shell go list $(TOP_PKGS))
-	go tool cover -html=cover.out -o cover.html
-
 .PHONY: install-ci
 install-ci: install
 	go get github.com/wadey/gocovmerge
@@ -188,10 +217,7 @@ install-ci: install
 	go get github.com/sectioneight/md-to-godoc
 
 .PHONY: test-ci
-test-ci: build-examples lint
-	@echo pre-compiling tests
-	@time go test -i $(ALL_PKGS)
-	@./scripts/cover.sh $(shell go list $(TOP_PKGS))
+test-ci: build-examples lint cover
 
 # TODO at the moment we're not generating tchan_*.go files
 .PHONY: thrift
@@ -229,10 +255,10 @@ generate-zipkin-swagger: idl-submodule
 	$(SWAGGER) generate server -f ./idl/swagger/zipkin2-api.yaml -t $(SWAGGER_GEN_DIR) -O PostSpans --exclude-main
 	rm $(SWAGGER_GEN_DIR)/restapi/operations/post_spans_urlbuilder.go $(SWAGGER_GEN_DIR)/restapi/server.go $(SWAGGER_GEN_DIR)/restapi/configure_zipkin.go $(SWAGGER_GEN_DIR)/models/trace.go $(SWAGGER_GEN_DIR)/models/list_of_traces.go $(SWAGGER_GEN_DIR)/models/dependency_link.go
 
-.PHONY: docs
-docs: $(MKDOCS_VIRTUAL_ENV)
-	bash -c 'source $(MKDOCS_VIRTUAL_ENV)/bin/activate; mkdocs serve'
+.PHONY: install-mockery
+install-mockery:
+	go get github.com/vektra/mockery
 
-$(MKDOCS_VIRTUAL_ENV):
-	virtualenv $(MKDOCS_VIRTUAL_ENV)
-	bash -c 'source $(MKDOCS_VIRTUAL_ENV)/bin/activate; pip install -r docs/requirements.txt'
+.PHONY: generate-mocks
+generate-mocks: install-mockery
+	$(MOCKERY) -all -dir ./pkg/es/ -output ./pkg/es/mocks && rm pkg/es/mocks/ClientBuilder.go

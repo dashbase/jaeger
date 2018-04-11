@@ -32,14 +32,16 @@ var driverCmd = &cobra.Command{
 	Short: "Starts Driver service",
 	Long:  `Starts Driver service.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		logger := log.NewFactory(logger.With(zap.String("service", "driver")))
+		zapLogger := logger.With(zap.String("service", "driver"))
+		logger := log.NewFactory(zapLogger)
 		server := driver.NewServer(
 			net.JoinHostPort(driverOptions.serverInterface, strconv.Itoa(driverOptions.serverPort)),
-			tracing.Init("driver", metricsFactory.Namespace("driver", nil), logger),
+			tracing.Init("driver", metricsFactory.Namespace("driver", nil), logger, jAgentHostPort),
 			metricsFactory,
 			logger,
+			jAgentHostPort,
 		)
-		return server.Run()
+		return logError(zapLogger, server.Run())
 	},
 }
 
@@ -53,6 +55,6 @@ var (
 func init() {
 	RootCmd.AddCommand(driverCmd)
 
-	driverCmd.Flags().StringVarP(&driverOptions.serverInterface, "bind", "", "127.0.0.1", "interface to which the driver server will bind")
+	driverCmd.Flags().StringVarP(&driverOptions.serverInterface, "bind", "", "0.0.0.0", "interface to which the driver server will bind")
 	driverCmd.Flags().IntVarP(&driverOptions.serverPort, "port", "p", 8082, "port on which the driver server will listen")
 }

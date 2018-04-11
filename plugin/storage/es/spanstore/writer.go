@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/uber/jaeger-lib/metrics"
 	"go.uber.org/zap"
+	"gopkg.in/olivere/elastic.v5"
 
 	"github.com/jaegertracing/jaeger/model"
 	"github.com/jaegertracing/jaeger/model/converter/json"
@@ -36,16 +37,14 @@ const (
 	spanType    = "span"
 	serviceType = "service"
 
-	defaultNumShards   = 5
-	defaultNumReplicas = 1
+	defaultNumShards = 5
 )
 
 type spanWriterMetrics struct {
 	indexCreate *storageMetrics.WriteMetrics
-	spans       *storageMetrics.WriteMetrics
 }
 
-type serviceWriter func(string, *jModel.Span) error
+type serviceWriter func(string, *jModel.Span)
 
 // SpanWriter is a wrapper around elastic.Client
 type SpanWriter struct {
@@ -86,9 +85,7 @@ func NewSpanWriter(
 	if numShards == 0 {
 		numShards = defaultNumShards
 	}
-	if numReplicas == 0 {
-		numReplicas = defaultNumReplicas
-	}
+
 	// TODO: Configurable TTL
 	serviceOperationStorage := NewServiceOperationStorage(ctx, client, metricsFactory, logger, time.Hour*12)
 	return &SpanWriter{
@@ -97,7 +94,6 @@ func NewSpanWriter(
 		logger: logger,
 		writerMetrics: spanWriterMetrics{
 			indexCreate: storageMetrics.NewWriteMetrics(metricsFactory, "IndexCreate"),
-			spans:       storageMetrics.NewWriteMetrics(metricsFactory, "Spans"),
 		},
 		serviceWriter: serviceOperationStorage.Write,
 		indexCache: cache.NewLRUWithOptions(
@@ -120,17 +116,21 @@ func (s *SpanWriter) WriteSpan(span *model.Span) error {
 	if err := s.createIndex(serviceIndexName, serviceMapping, jsonSpan); err != nil {
 		return err
 	}
-	if err := s.writeService(serviceIndexName, jsonSpan); err != nil {
-		return err
-	}
+	s.writeService(serviceIndexName, jsonSpan)
 	if err := s.createIndex(spanIndexName, spanMapping, jsonSpan); err != nil {
 		return err
 	}
-	return s.writeSpan(spanIndexName, jsonSpan)
+	s.writeSpan(spanIndexName, jsonSpan)
+	return nil
+}
+
+// Close closes SpanWriter
+func (s *SpanWriter) Close() error {
+	return s.client.Close()
 }
 
 func indexNames(span *model.Span) (string, string) {
-	spanDate := span.StartTime.Format("2006-01-02")
+	spanDate := span.StartTime.UTC().Format("2006-01-02")
 	return spanIndexPrefix + spanDate, serviceIndexPrefix + spanDate
 }
 
@@ -139,13 +139,15 @@ func (s *SpanWriter) createIndex(indexName string, mapping string, jsonSpan *jMo
 		start := time.Now()
 		exists, _ := s.client.IndexExists(indexName).Do(s.ctx) // don't need to check the error because the exists variable will be false anyway if there is an error
 		if !exists {
-			// if there are multiple collectors writing to the same elasticsearch host, if the collectors pass
-			// the exists check above and try to create the same index all at once, this might fail and
-			// drop a couple spans (~1 per collector). Creating indices ahead of time alleviates this issue.
+			// if there are multiple collectors writing to the same elasticsearch host a race condition can occur - create the index multiple times
+			// we check for the error type to minimize errors
 			_, err := s.client.CreateIndex(indexName).Body(s.fixMapping(mapping)).Do(s.ctx)
 			s.writerMetrics.indexCreate.Emit(err, time.Since(start))
 			if err != nil {
-				return s.logError(jsonSpan, err, "Failed to create index", s.logger)
+				eErr, ok := err.(*elastic.Error)
+				if !ok || eErr.Details != nil && eErr.Details.Type != "index_already_exists_exception" {
+					return s.logError(jsonSpan, err, "Failed to create index", s.logger)
+				}
 			}
 		}
 		writeCache(indexName, s.indexCache)
@@ -167,19 +169,14 @@ func (s *SpanWriter) fixMapping(mapping string) string {
 	return mapping
 }
 
-func (s *SpanWriter) writeService(indexName string, jsonSpan *jModel.Span) error {
-	return s.serviceWriter(indexName, jsonSpan)
+func (s *SpanWriter) writeService(indexName string, jsonSpan *jModel.Span) {
+	s.serviceWriter(indexName, jsonSpan)
 }
 
-func (s *SpanWriter) writeSpan(indexName string, jsonSpan *jModel.Span) error {
-	start := time.Now()
+func (s *SpanWriter) writeSpan(indexName string, jsonSpan *jModel.Span) {
 	elasticSpan := Span{Span: jsonSpan, StartTimeMillis: jsonSpan.StartTime / 1000} // Microseconds to milliseconds
-	_, err := s.client.Index().Index(indexName).Type(spanType).BodyJson(&elasticSpan).Do(s.ctx)
-	s.writerMetrics.spans.Emit(err, time.Since(start))
-	if err != nil {
-		return s.logError(jsonSpan, err, "Failed to insert span", s.logger)
-	}
-	return nil
+
+	s.client.Index().Index(indexName).Type(spanType).BodyJson(&elasticSpan).Add()
 }
 
 func (s *SpanWriter) logError(span *jModel.Span, err error, msg string, logger *zap.Logger) error {

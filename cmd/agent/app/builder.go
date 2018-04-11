@@ -43,23 +43,23 @@ const (
 
 	defaultHTTPServerHostPort = ":5778"
 
-	agentServiceName            = "jaeger-agent"
-	defaultCollectorServiceName = "jaeger-collector"
-
-	jaegerModel model = "jaeger"
+	jaegerModel Model = "jaeger"
 	zipkinModel       = "zipkin"
 
-	compactProtocol protocol = "compact"
+	compactProtocol Protocol = "compact"
 	binaryProtocol           = "binary"
 )
 
-type model string
-type protocol string
+// Model used to distinguish the data transfer model
+type Model string
+
+// Protocol used to distinguish the data transfer protocol
+type Protocol string
 
 var (
 	errNoReporters = errors.New("agent requires at least one Reporter")
 
-	protocolFactoryMap = map[protocol]thrift.TProtocolFactory{
+	protocolFactoryMap = map[Protocol]thrift.TProtocolFactory{
 		compactProtocol: thrift.NewTCompactProtocolFactory(),
 		binaryProtocol:  thrift.NewTBinaryProtocolFactoryDefault(),
 	}
@@ -71,12 +71,7 @@ type Builder struct {
 	HTTPServer HTTPServerConfiguration  `yaml:"httpServer"`
 	Metrics    jmetrics.Builder         `yaml:"metrics"`
 
-	// These 3 fields are copied from tchreporter.Builder because yaml does not parse embedded structs
-	CollectorHostPorts   []string `yaml:"collectorHostPorts"`
-	DiscoveryMinPeers    int      `yaml:"minPeers"`
-	CollectorServiceName string   `yaml:"collectorServiceName"`
-
-	tchreporter.Builder
+	tchreporter.Builder `yaml:",inline"`
 
 	otherReporters []reporter.Reporter
 	metricsFactory metrics.Factory
@@ -85,8 +80,8 @@ type Builder struct {
 // ProcessorConfiguration holds config for a processor that receives spans from Server
 type ProcessorConfiguration struct {
 	Workers  int                 `yaml:"workers"`
-	Model    model               `yaml:"model"`
-	Protocol protocol            `yaml:"protocol"`
+	Model    Model               `yaml:"model"`
+	Protocol Protocol            `yaml:"protocol"`
 	Server   ServerConfiguration `yaml:"server"`
 }
 
@@ -115,16 +110,7 @@ func (b *Builder) WithMetricsFactory(mf metrics.Factory) *Builder {
 }
 
 func (b *Builder) createMainReporter(mFactory metrics.Factory, logger *zap.Logger) (*tchreporter.Reporter, error) {
-	if len(b.Builder.CollectorHostPorts) == 0 {
-		b.Builder.CollectorHostPorts = b.CollectorHostPorts
-	}
-	if b.Builder.CollectorServiceName == "" {
-		b.Builder.CollectorServiceName = b.CollectorServiceName
-	}
-	if b.Builder.DiscoveryMinPeers == 0 {
-		b.Builder.DiscoveryMinPeers = b.DiscoveryMinPeers
-	}
-	return b.Builder.CreateReporter(mFactory, logger)
+	return b.CreateReporter(mFactory, logger)
 }
 
 func (b *Builder) getMetricsFactory() (metrics.Factory, error) {
@@ -154,8 +140,8 @@ func (b *Builder) CreateAgent(logger *zap.Logger) (*Agent, error) {
 		return nil, err
 	}
 	httpServer := b.HTTPServer.GetHTTPServer(b.CollectorServiceName, mainReporter.Channel(), mFactory)
-	if b.metricsFactory == nil {
-		b.Metrics.RegisterHandler(httpServer.Handler.(*http.ServeMux))
+	if h := b.Metrics.Handler(); mFactory != nil && h != nil {
+		httpServer.Handler.(*http.ServeMux).Handle(b.Metrics.HTTPRoute, h)
 	}
 	return NewAgent(processors, httpServer, logger), nil
 }

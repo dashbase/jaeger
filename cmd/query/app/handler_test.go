@@ -26,9 +26,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	jaeger "github.com/uber/jaeger-client-go"
 	"go.uber.org/zap"
 
 	"github.com/jaegertracing/jaeger/model"
@@ -37,7 +38,6 @@ import (
 	depsmocks "github.com/jaegertracing/jaeger/storage/dependencystore/mocks"
 	"github.com/jaegertracing/jaeger/storage/spanstore"
 	spanstoremocks "github.com/jaegertracing/jaeger/storage/spanstore/mocks"
-	jaeger "github.com/uber/jaeger-client-go"
 )
 
 const millisToNanosMultiplier = int64(time.Millisecond / time.Nanosecond)
@@ -84,7 +84,9 @@ func initializeTestServerWithHandler(options ...HandlerOption) (*httptest.Server
 		append(
 			[]HandlerOption{
 				HandlerOptions.Logger(zap.NewNop()),
-				HandlerOptions.Prefix(defaultHTTPPrefix),
+				// add options for test coverage
+				HandlerOptions.Prefix(defaultAPIPrefix),
+				HandlerOptions.BasePath("/"),
 				HandlerOptions.QueryLookbackDuration(defaultTraceQueryLookbackDuration),
 			},
 			options...,
@@ -95,7 +97,7 @@ func initializeTestServerWithHandler(options ...HandlerOption) (*httptest.Server
 func initializeTestServerWithOptions(options ...HandlerOption) (*httptest.Server, *spanstoremocks.Reader, *depsmocks.Reader, *APIHandler) {
 	readStorage := &spanstoremocks.Reader{}
 	dependencyStorage := &depsmocks.Reader{}
-	r := mux.NewRouter()
+	r := NewRouter()
 	handler := NewAPIHandler(readStorage, dependencyStorage, options...)
 	handler.RegisterRoutes(r)
 	return httptest.NewServer(r), readStorage, dependencyStorage, handler
@@ -137,23 +139,95 @@ func TestGetTraceSuccess(t *testing.T) {
 	assert.Len(t, response.Errors, 0)
 }
 
-func TestTracing(t *testing.T) {
-	reporter := jaeger.NewInMemoryReporter()
-	jaegerTracer, jaegerCloser := jaeger.NewTracer("test", jaeger.NewConstSampler(true), reporter)
-	defer jaegerCloser.Close()
+func TestPrettyPrint(t *testing.T) {
+	data := struct{ Data string }{Data: "Bender"}
 
-	server, readMock, _ := initializeTestServer(HandlerOptions.Tracer(jaegerTracer))
-	defer server.Close()
-	readMock.On("GetTrace", mock.AnythingOfType("model.TraceID")).
-		Return(mockTrace, nil).Once()
+	testCases := []struct {
+		param  string
+		output string
+	}{
+		{output: `{"Data":"Bender"}`},
+		{param: "?prettyPrint=false", output: `{"Data":"Bender"}`},
+		{param: "?prettyPrint=x", output: "{\n    \"Data\": \"Bender\"\n}"},
+	}
 
-	var response structuredResponse
-	err := getJSON(server.URL+`/api/traces/123456`, &response)
-	assert.NoError(t, err)
-	assert.Len(t, response.Errors, 0)
+	get := func(url string) string {
+		res, err := http.Get(url)
+		require.NoError(t, err)
+		body, err := ioutil.ReadAll(res.Body)
+		require.NoError(t, err)
+		return string(body)
+	}
 
-	assert.Len(t, reporter.GetSpans(), 1)
-	assert.Equal(t, "/api/traces/{traceID}", reporter.GetSpans()[0].(*jaeger.Span).OperationName())
+	for _, testCase := range testCases {
+		t.Run(testCase.param, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				new(APIHandler).writeJSON(w, r, &data)
+			}))
+			defer server.Close()
+
+			out := get(server.URL + testCase.param)
+			assert.Equal(t, testCase.output, out)
+		})
+	}
+}
+
+func TestGetTrace(t *testing.T) {
+	testCases := []struct {
+		suffix      string
+		numSpanRefs int
+	}{
+		{suffix: "", numSpanRefs: 0},
+		{suffix: "?raw=true", numSpanRefs: 1}, // bad span reference is not filtered out
+		{suffix: "?raw=false", numSpanRefs: 0},
+	}
+
+	makeMockTrace := func(t *testing.T) *model.Trace {
+		bytes, err := json.Marshal(mockTrace)
+		require.NoError(t, err)
+		var trace *model.Trace
+		require.NoError(t, json.Unmarshal(bytes, &trace))
+		trace.Spans[1].References = []model.SpanRef{
+			{TraceID: model.TraceID{High: 0, Low: 0}},
+		}
+		return trace
+	}
+
+	extractTraces := func(t *testing.T, response *structuredResponse) []ui.Trace {
+		var traces []ui.Trace
+		bytes, err := json.Marshal(response.Data)
+		require.NoError(t, err)
+		err = json.Unmarshal(bytes, &traces)
+		require.NoError(t, err)
+		return traces
+	}
+
+	for _, tc := range testCases {
+		testCase := tc // capture loop var
+		t.Run(testCase.suffix, func(t *testing.T) {
+			reporter := jaeger.NewInMemoryReporter()
+			jaegerTracer, jaegerCloser := jaeger.NewTracer("test", jaeger.NewConstSampler(true), reporter)
+			defer jaegerCloser.Close()
+
+			server, readMock, _ := initializeTestServer(HandlerOptions.Tracer(jaegerTracer))
+			defer server.Close()
+
+			readMock.On("GetTrace", model.TraceID{Low: 0x123456abc}).
+				Return(makeMockTrace(t), nil).Once()
+
+			var response structuredResponse
+			err := getJSON(server.URL+`/api/traces/123456aBC`+testCase.suffix, &response) // trace ID in mixed lower/upper case
+			assert.NoError(t, err)
+			assert.Len(t, response.Errors, 0)
+
+			assert.Len(t, reporter.GetSpans(), 1, "HTTP request was traced and span reported")
+			assert.Equal(t, "/api/traces/{traceID}", reporter.GetSpans()[0].(*jaeger.Span).OperationName())
+
+			traces := extractTraces(t, &response)
+			assert.Len(t, traces[0].Spans, 2)
+			assert.Len(t, traces[0].Spans[1].References, testCase.numSpanRefs)
+		})
+	}
 }
 
 func TestGetTraceDBFailure(t *testing.T) {
@@ -345,10 +419,10 @@ func TestGetOperationsSuccess(t *testing.T) {
 	server, mock, _ := initializeTestServer()
 	defer server.Close()
 	expectedOperations := []string{"", "get"}
-	mock.On("GetOperations", "trifle").Return(expectedOperations, nil).Once()
+	mock.On("GetOperations", "abc/trifle").Return(expectedOperations, nil).Once()
 
 	var response structuredResponse
-	err := getJSON(server.URL+"/api/operations?service=trifle", &response)
+	err := getJSON(server.URL+"/api/operations?service=abc%2Ftrifle", &response)
 	assert.NoError(t, err)
 	actualOperations := make([]string, len(expectedOperations))
 	for i, s := range response.Data.([]interface{}) {
@@ -380,10 +454,10 @@ func TestGetOperationsLegacySuccess(t *testing.T) {
 	server, mock, _ := initializeTestServer()
 	defer server.Close()
 	expectedOperations := []string{"", "get"}
-	mock.On("GetOperations", "trifle").Return(expectedOperations, nil).Once()
+	mock.On("GetOperations", "abc/trifle").Return(expectedOperations, nil).Once()
 
 	var response structuredResponse
-	err := getJSON(server.URL+"/api/services/trifle/operations", &response)
+	err := getJSON(server.URL+"/api/services/abc%2Ftrifle/operations", &response)
 	assert.NoError(t, err)
 	actualOperations := make([]string, len(expectedOperations))
 	for i, s := range response.Data.([]interface{}) {

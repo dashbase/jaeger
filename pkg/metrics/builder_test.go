@@ -15,10 +15,11 @@
 package metrics
 
 import (
+	"expvar"
 	"flag"
-	"net/http"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -46,21 +47,44 @@ func TestAddFlags(t *testing.T) {
 }
 
 func TestBuilder(t *testing.T) {
+	assertPromCounter := func() {
+		families, err := prometheus.DefaultGatherer.Gather()
+		require.NoError(t, err)
+		for _, mf := range families {
+			if mf.GetName() == "foo:counter" {
+				return
+			}
+		}
+		t.FailNow()
+	}
+	assertExpVarCounter := func() {
+		var found expvar.KeyValue
+		expected := "foo.counter"
+		expvar.Do(func(kv expvar.KeyValue) {
+			if kv.Key == expected {
+				found = kv
+			}
+		})
+		assert.Equal(t, expected, found.Key)
+	}
 	testCases := []struct {
 		backend string
 		route   string
 		err     error
 		handler bool
+		assert  func()
 	}{
 		{
 			backend: "expvar",
 			route:   "/",
 			handler: true,
+			assert:  assertExpVarCounter,
 		},
 		{
 			backend: "prometheus",
 			route:   "/",
 			handler: true,
+			assert:  assertPromCounter,
 		},
 		{
 			backend: "none",
@@ -88,10 +112,12 @@ func TestBuilder(t *testing.T) {
 			continue
 		}
 		require.NotNil(t, mf)
+		mf.Counter("counter", nil).Inc(1)
+		if testCase.assert != nil {
+			testCase.assert()
+		}
 		if testCase.handler {
-			require.NotNil(t, b.handler)
-			mux := http.NewServeMux()
-			b.RegisterHandler(mux)
+			require.NotNil(t, b.Handler())
 		}
 	}
 }

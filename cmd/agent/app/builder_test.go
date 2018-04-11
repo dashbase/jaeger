@@ -126,6 +126,19 @@ func TestBuilderMetrics(t *testing.T) {
 	assert.Equal(t, mf, mf2)
 }
 
+func TestBuilderMetricsHandler(t *testing.T) {
+	b := &Builder{}
+	b.Metrics.Backend = "expvar"
+	b.Metrics.HTTPRoute = "/expvar"
+	factory, err := b.Metrics.CreateMetricsFactory("test")
+	assert.NoError(t, err)
+	assert.NotNil(t, factory)
+	b.metricsFactory = factory
+	agent, err := b.CreateAgent(zap.NewNop())
+	assert.NoError(t, err)
+	assert.NotNil(t, agent)
+}
+
 func TestBuilderMetricsError(t *testing.T) {
 	b := &Builder{}
 	b.Metrics.Backend = "invalid"
@@ -143,14 +156,14 @@ func TestBuilderWithDiscoveryError(t *testing.T) {
 
 func TestBuilderWithProcessorErrors(t *testing.T) {
 	testCases := []struct {
-		model       model
-		protocol    protocol
+		model       Model
+		protocol    Protocol
 		hostPort    string
 		err         string
 		errContains string
 	}{
-		{protocol: protocol("bad"), err: "cannot find protocol factory for protocol bad"},
-		{protocol: compactProtocol, model: model("bad"), err: "cannot find agent processor for data model bad"},
+		{protocol: Protocol("bad"), err: "cannot find protocol factory for protocol bad"},
+		{protocol: compactProtocol, model: Model("bad"), err: "cannot find agent processor for data model bad"},
 		{protocol: compactProtocol, model: jaegerModel, err: "no host:port provided for udp server: {QueueSize:1000 MaxPacketSize:65000 HostPort:}"},
 		{protocol: compactProtocol, model: zipkinModel, hostPort: "bad-host-port", errContains: "bad-host-port"},
 	}

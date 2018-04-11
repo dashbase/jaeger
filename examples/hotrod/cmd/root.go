@@ -15,21 +15,20 @@
 package cmd
 
 import (
-	"fmt"
 	"math/rand"
 	"os"
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"github.com/uber/jaeger-lib/metrics"
-	"github.com/uber/jaeger-lib/metrics/go-kit"
-	"github.com/uber/jaeger-lib/metrics/go-kit/expvar"
+	jexpvar "github.com/uber/jaeger-lib/metrics/expvar"
+	jprom "github.com/uber/jaeger-lib/metrics/prometheus"
 	"go.uber.org/zap"
 )
 
 var (
-	cfgFile        string
+	metricsBackend string
+	jAgentHostPort string
 	logger         *zap.Logger
 	metricsFactory metrics.Factory
 )
@@ -51,25 +50,29 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	RootCmd.PersistentFlags().StringVarP(&metricsBackend, "metrics", "m", "expvar", "Metrics backend (expvar|prometheus)")
+	RootCmd.PersistentFlags().StringVarP(&jAgentHostPort, "jaeger-agent.host-port", "a", "0.0.0.0:6831", "String representing jaeger-agent host:port")
+	rand.Seed(int64(time.Now().Nanosecond()))
 	logger, _ = zap.NewDevelopment()
-	metricsFactory = xkit.Wrap("", expvar.NewFactory(10)) // 10 buckets for histograms
+	cobra.OnInitialize(initMetrics)
 }
 
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
-	if cfgFile != "" { // enable ability to specify config file via flag
-		viper.SetConfigFile(cfgFile)
+// initMetrics is called before the command is executed.
+func initMetrics() {
+	if metricsBackend == "expvar" {
+		metricsFactory = jexpvar.NewFactory(10) // 10 buckets for histograms
+		logger.Info("Using expvar as metrics backend")
+	} else if metricsBackend == "prometheus" {
+		metricsFactory = jprom.New()
+		logger.Info("Using Prometheus as metrics backend")
+	} else {
+		logger.Fatal("unsupported metrics backend " + metricsBackend)
 	}
+}
 
-	viper.SetConfigName(".jaeger-demo") // name of config file (without extension)
-	viper.AddConfigPath("$HOME")        // adding home directory as first search path
-	viper.AutomaticEnv()                // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+func logError(logger *zap.Logger, err error) error {
+	if err != nil {
+		logger.Error("Error running command", zap.Error(err))
 	}
-
-	rand.Seed(int64(time.Now().Nanosecond()))
+	return err
 }
