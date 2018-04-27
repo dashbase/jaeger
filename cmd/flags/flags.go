@@ -32,6 +32,7 @@ const (
 	MemoryStorageType = "memory"
 	// ESStorageType is the storage type flag denoting an ElasticSearch backing store
 	ESStorageType                  = "elasticsearch"
+	DashbaseStorageType            = "dashbase"
 	spanStorageType                = "span-storage.type"
 	logLevel                       = "log-level"
 	dependencyStorageDataFrequency = "dependency-storage.data-frequency"
@@ -86,7 +87,7 @@ func (flags *SharedFlags) InitFromViper(v *viper.Viper) *SharedFlags {
 
 // AddFlags adds flags for SharedFlags
 func AddFlags(flagSet *flag.FlagSet) {
-	flagSet.String(spanStorageType, CassandraStorageType, fmt.Sprintf("The type of span storage backend to use, options are currently [%v,%v,%v]", CassandraStorageType, ESStorageType, MemoryStorageType))
+	flagSet.String(spanStorageType, CassandraStorageType, fmt.Sprintf("The type of span storage backend to use, options are currently [%v,%v,%v,%v]", CassandraStorageType, ESStorageType, MemoryStorageType, DashbaseStorageType))
 	flagSet.String(logLevel, "info", "Minimal allowed log Level. For more levels see https://github.com/uber-go/zap")
 	flagSet.Duration(dependencyStorageDataFrequency, time.Hour*24, "Frequency of service dependency calculations")
 }
