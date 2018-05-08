@@ -8,9 +8,15 @@ import (
 )
 
 // See http://avro.apache.org/docs/1.8.2/spec.html#schema_fingerprints
+// fingerprint -1959126995677700088L
+
 const (
 	emptyCRC64 uint64 = 0xc15d213aa4d7a795
-	avroSchema string = `{"name":"io.dashbase.avro.DashbaseEvent","type":"record","fields":[{"name":"timeInMillis","type":"long"},{"name":"metaColumns","type":{"type":"map","values":"string"}},{"name":"numberColumns","type":{"type":"map","values":"double"}},{"name":"textColumns","type":{"type":"map","values":"string"}},{"name":"idColumns","type":{"type":"map","values":"string"}},{"name":"omitPayload","type":"boolean"}]}`
+	avroSchema string = `{"name":"io.dashbase.avro.DashbaseEvent","type":"record","fields":[{"name":"timeInMillis","type":"long"},{"name":"metaColumns","type":{"type":"map","values":"string"}},{"name":"numberColumns","type":{"type":"map","values":"double"}},{"name":"textColumns","type":{"type":"map","values":"string"}},{"name":"idColumns","type":{"type":"map","values":"string"}},{"name":"omitPayload","type":"boolean"},{"name": "raw", "type":["null", "string"],"default":"null"}]}`
+)
+
+var (
+	fingerprint int64 = -1959126995677700088;
 )
 
 type Avro struct {
@@ -24,6 +30,7 @@ type Event struct {
 	TextColumns   map[string]string
 	NumberColumns map[string]float64
 	IdColumns     map[string]string
+	Raw           string
 	OmitPayload   bool
 }
 
@@ -53,29 +60,37 @@ func getAvroCRC64(buf []byte) uint64 {
 }
 
 func (a *Avro) Encode(event Event) ([]byte, error) {
-	raw_event := make(map[string]interface{})
-	raw_event["timeInMillis"] = event.TimeInMillis
-	raw_event["metaColumns"] = event.MetaColumns
-	raw_event["textColumns"] = event.TextColumns
-	raw_event["numberColumns"] = event.NumberColumns
-	raw_event["idColumns"] = event.IdColumns
-	raw_event["omitPayload"] = event.OmitPayload
-	body, err := a.codec.BinaryFromNative(nil, raw_event)
+	rawEvent := make(map[string]interface{})
+	rawEvent["timeInMillis"] = event.TimeInMillis
+	rawEvent["metaColumns"] = event.MetaColumns
+	rawEvent["textColumns"] = event.TextColumns
+	rawEvent["numberColumns"] = event.NumberColumns
+	rawEvent["idColumns"] = event.IdColumns
+	rawEvent["omitPayload"] = event.OmitPayload
+	rawEvent["raw"] = event.Raw
+	if event.Raw == ""{
+		rawEvent["raw"] =goavro.Union("null", nil)
+	}
+	body, err := a.codec.BinaryFromNative(nil, rawEvent)
 	if err != nil {
 		return nil, err
 	}
 
 	message := new(bytes.Buffer)
 	message.Write([]byte{0xC3, 0x01})
-	binary.Write(message, binary.LittleEndian, a.schemaChecksum)
+	binary.Write(message, binary.LittleEndian, uint64(fingerprint))
 	message.Write(body)
 
 	return message.Bytes(), nil
 }
 
 func NewAvro() *Avro {
+	bs := make([]byte, 8)
+	var num int64 = -1959126995677700088;
+	binary.LittleEndian.PutUint64(bs, uint64(num))
+
 	return &Avro{
 		codec:          makeAvroCodec(),
-		schemaChecksum: getAvroCRC64([]byte(avroSchema)),
+		//schemaChecksum: getAvroCRC64([]byte(avroSchema)),
 	}
 }

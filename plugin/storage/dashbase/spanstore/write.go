@@ -12,6 +12,7 @@ import (
 	"github.com/jaegertracing/jaeger/model"
 	"github.com/jaegertracing/jaeger/pkg/dashbase"
 	storageMetrics "github.com/jaegertracing/jaeger/storage/spanstore/metrics"
+	"encoding/hex"
 )
 
 type spanWriterMetrics struct {
@@ -58,9 +59,8 @@ func (s *SpanWriter) WriteSpan(span *model.Span) error {
 	if err != nil {
 		return s.logError(span, err, "Fail to encode avro", s.logger)
 	}
+	s.logger.Debug(fmt.Sprintf("topic:%s -->> hex:%s", s.kafkaTopic, hex.EncodeToString(message)))
 	s.kafkaClient.Send(s.kafkaTopic, message)
-	s.logger.Warn("Send msg")
-
 	return nil
 }
 
@@ -85,7 +85,6 @@ func SpanToDashbaseAvroEvent(span *model.Span) dashbase.Event {
 	e.IdColumns["TraceID"] = span.TraceID.String()
 	e.IdColumns["SpanID"] = span.SpanID.String()
 	e.IdColumns["ParentSpanID"] = span.ParentSpanID.String()
-
 	e.TextColumns["OperationName"] = span.OperationName
 	e.NumberColumns["Flags"] = float64(span.Flags)
 	e.IdColumns["Duration"] = strconv.FormatInt(span.Duration.Nanoseconds(), 10)
