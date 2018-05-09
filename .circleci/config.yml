@@ -1,7 +1,7 @@
 version: 2
 jobs:
   build:
-    working_directory: /go/src/github.com/CircleCI-Public/circleci-demo-go
+    working_directory: /go/src/github.com/dashbase/jaeger
 
     docker:
       - image: circleci/golang:1.9
@@ -12,28 +12,28 @@ jobs:
       - run: ssh-keyscan ${KIBANA_HOST} >> ~/.ssh/known_hosts
 
       - setup_remote_docker:
-        docker_layer_caching: true
+          docker_layer_caching: true
 
       - restore_cache:
           keys:
             - v1-pkg-cache
 
       - run:
-        name: "Make"
-        command: |
-          make build-collector-linux
+          name: "Make"
+          command: |
+            make build-collector-linux
 
       - save_cache:
-        key: v1-pkg-cache
-        paths:
-          - "/go/pkg"
+          key: v1-pkg-cache
+          paths:
+            - "/go/pkg"
 
       - run:
-        name: "Build image"
-        command: |
-          docker login $DOCKER_USERNAME $DOCKERHUB_PASSWORD
-          docker build -t dashbase/jaeger-collector:develop ./cmd/collector
-          docker push dashbase/jaeger-collector:develop
+          name: "Build image"
+          command: |
+            docker login $DOCKER_USERNAME $DOCKERHUB_PASSWORD
+            docker build -t dashbase/jaeger-collector:develop ./cmd/collector
+            docker push dashbase/jaeger-collector:develop
 
 
 workflows:
