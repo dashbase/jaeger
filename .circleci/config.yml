@@ -38,7 +38,7 @@ jobs:
       - run:
           name: "Build image"
           command: |
-            docker login ${DOCKER_USERNAME} ${DOCKERHUB_PASSWORD}
+            docker login -u ${DOCKER_USERNAME} -p ${DOCKERHUB_PASSWORD}
             docker build -t dashbase/jaeger-collector:develop ./cmd/collector
             docker push dashbase/jaeger-collector:develop
 
