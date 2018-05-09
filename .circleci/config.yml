@@ -1,0 +1,52 @@
+version: 2
+jobs:
+  build:
+    working_directory: /go/src/github.com/jaegertracing/jaeger
+
+    docker:
+      - image: circleci/golang:1.9
+
+    steps:
+      - checkout
+
+      - setup_remote_docker:
+          docker_layer_caching: true
+
+      - restore_cache:
+          keys:
+            - vendor-{{ checksum "glide.lock" }}
+
+      - run:
+          name: "Install Glide"
+          command: |
+            curl https://glide.sh/get | sh
+      - run:
+          name: "Install dependencies"
+          command: |
+            glide install
+
+      - run:
+          name: "Make"
+          command: |
+            make build-collector-linux
+
+      - save_cache:
+          key: vendor-{{ checksum "glide.lock" }}
+          paths:
+            - "/go/src/github.com/jaegertracing/jaeger/vendor"
+
+      # DOCKER_TAG default to develop, which is defined in the CIRCLECI environment.
+
+      - run:
+          name: "Build image"
+          command: |
+            docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
+            docker build -t dashbase/jaeger-collector:${DOCKER_TAG} ./cmd/collector
+            docker push dashbase/jaeger-collector:${DOCKER_TAG}
+
+
+workflows:
+  version: 2
+  build-n-deploy:
+    jobs:
+      - build
