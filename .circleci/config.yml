@@ -1,7 +1,7 @@
 version: 2
 jobs:
   build:
-    working_directory: /go/src/github.com/dashbase/jaeger
+    working_directory: /go/src/github.com/jaegertracing/jaeger
 
     docker:
       - image: circleci/golang:1.9
@@ -14,7 +14,16 @@ jobs:
 
       - restore_cache:
           keys:
-            - v1-pkg-cache
+            - vendor-{{ checksum "glide.lock" }}
+
+      - run:
+          name: "Install Glide"
+          command: |
+            curl https://glide.sh/get | sh
+      - run:
+          name: "Install dependencies"
+          command: |
+            glide install
 
       - run:
           name: "Make"
@@ -22,9 +31,9 @@ jobs:
             make build-collector-linux
 
       - save_cache:
-          key: v1-pkg-cache
+          key: vendor-{{ checksum "glide.lock" }}
           paths:
-            - "/go/pkg"
+            - "/go/src/github.com/jaegertracing/jaeger/vendor"
 
       - run:
           name: "Build image"
