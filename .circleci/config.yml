@@ -9,8 +9,6 @@ jobs:
     steps:
       - checkout
 
-      - run: ssh-keyscan ${KIBANA_HOST} >> ~/.ssh/known_hosts
-
       - setup_remote_docker:
           docker_layer_caching: true
 
@@ -31,7 +29,7 @@ jobs:
       - run:
           name: "Build image"
           command: |
-            docker login $DOCKER_USERNAME $DOCKERHUB_PASSWORD
+            docker login ${DOCKER_USERNAME} ${DOCKERHUB_PASSWORD}
             docker build -t dashbase/jaeger-collector:develop ./cmd/collector
             docker push dashbase/jaeger-collector:develop
 
