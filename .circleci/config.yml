@@ -35,12 +35,14 @@ jobs:
           paths:
             - "/go/src/github.com/jaegertracing/jaeger/vendor"
 
+      # DOCKER_TAG default to develop, which is defined in the CIRCLECI environment.
+
       - run:
           name: "Build image"
           command: |
-            docker login -u ${DOCKER_USERNAME} -p ${DOCKERHUB_PASSWORD}
-            docker build -t dashbase/jaeger-collector:develop ./cmd/collector
-            docker push dashbase/jaeger-collector:develop
+            docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
+            docker build -t dashbase/jaeger-collector:${DOCKER_TAG} ./cmd/collector
+            docker push dashbase/jaeger-collector:${DOCKER_TAG}
 
 
 workflows:
