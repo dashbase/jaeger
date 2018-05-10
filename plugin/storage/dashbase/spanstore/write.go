@@ -13,6 +13,7 @@ import (
 	"github.com/jaegertracing/jaeger/pkg/dashbase"
 	storageMetrics "github.com/jaegertracing/jaeger/storage/spanstore/metrics"
 	"encoding/hex"
+	"encoding/json"
 )
 
 type spanWriterMetrics struct {
@@ -82,19 +83,24 @@ func SpanToDashbaseAvroEvent(span *model.Span) dashbase.Event {
 	}
 	e.TimeInMillis = span.StartTime.UnixNano() / 1000000
 	e.IdColumns["StartTime"] = strconv.FormatInt(span.StartTime.UnixNano(), 10)
+	e.NumberColumns["Duration"] = float64(span.Duration.Nanoseconds())
+	e.MetaColumns["ServiceName"] = span.Process.ServiceName
+	e.MetaColumns["OperationName"] = span.OperationName
 	e.IdColumns["TraceID"] = span.TraceID.String()
 	e.IdColumns["SpanID"] = span.SpanID.String()
 	e.IdColumns["ParentSpanID"] = span.ParentSpanID.String()
-	e.TextColumns["OperationName"] = span.OperationName
-	e.NumberColumns["Flags"] = float64(span.Flags)
-	e.IdColumns["Duration"] = strconv.FormatInt(span.Duration.Nanoseconds(), 10)
+	e.MetaColumns["Flags"] = strconv.FormatUint(uint64(span.Flags), 10)
+
+	raw, err := json.Marshal(span)
+	if err != nil {
+		e.Raw = string(raw)
+	}
 
 	for _, tag := range span.Tags {
 		e.TextColumns[fmt.Sprintf("tag.%s", tag.Key)] = tag.AsString()
 	}
 
 	//todo: Log
-	e.MetaColumns["ServiceName"] = span.Process.ServiceName
 	for _, tag := range span.Process.Tags {
 		e.TextColumns[fmt.Sprintf("process.%s", tag.Key)] = tag.AsString()
 	}

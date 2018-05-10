@@ -1,17 +1,17 @@
 package dashbase
+
 import (
 	"github.com/Shopify/sarama"
 )
 
-
 type KafkaClient struct {
 	producer sarama.AsyncProducer
-	Hosts []string
+	Hosts    []string
 }
-
 
 func (k *KafkaClient) Open() error {
 	config := sarama.NewConfig()
+	config.Version = sarama.V1_0_0_0;
 	producer, err := sarama.NewAsyncProducer(k.Hosts, config)
 	if err != nil {
 		return err

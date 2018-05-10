@@ -68,8 +68,8 @@ func (a *Avro) Encode(event Event) ([]byte, error) {
 	rawEvent["idColumns"] = event.IdColumns
 	rawEvent["omitPayload"] = event.OmitPayload
 	rawEvent["raw"] = event.Raw
-	if event.Raw == ""{
-		rawEvent["raw"] =goavro.Union("null", nil)
+	if event.Raw == "" {
+		rawEvent["raw"] = goavro.Union("null", nil)
 	}
 	body, err := a.codec.BinaryFromNative(nil, rawEvent)
 	if err != nil {
@@ -90,7 +90,7 @@ func NewAvro() *Avro {
 	binary.LittleEndian.PutUint64(bs, uint64(num))
 
 	return &Avro{
-		codec:          makeAvroCodec(),
+		codec: makeAvroCodec(),
 		//schemaChecksum: getAvroCRC64([]byte(avroSchema)),
 	}
 }
